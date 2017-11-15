@@ -24,7 +24,6 @@ enum Type {
 	TVoid;
 	TInt;
 	TShort;
-	TLong;
 	TFloat;
 	TDouble;
 	TBool;

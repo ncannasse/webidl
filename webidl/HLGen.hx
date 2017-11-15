@@ -139,7 +139,6 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "void*";
 			case TArray(t): makeType(t) + "[]";
 			case TBool: "bool";
-			case TLong: "long";
 			case TCustom(id): typeNames.get(id).full;
 			}
 		}
@@ -149,7 +148,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TFloat: "_F32";
 			case TDouble: "_F64";
 			case TShort: "_I16";
-			case TInt, TLong: "_I32";
+			case TInt: "_I32";
 			case TVoid: "_VOID";
 			case TAny, TVoidPtr: "_BYTES";
 			case TArray(t): "_BYTES";
@@ -163,7 +162,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TFloat: "f";
 			case TDouble: "d";
 			case TShort: "ui16";
-			case TInt, TLong: "i";
+			case TInt: "i";
 			case TBool: "b";
 			default: throw "assert";
 			}

@@ -134,8 +134,7 @@ class Parser {
 		case "void": TVoid;
 		case "float": TFloat;
 		case "double": TDouble;
-		case "long": TLong;
-		case "int": TInt;
+		case "long": TInt; // long ensures 32 bits
 		case "short": TShort;
 		case "boolean": TBool;
 		case "any": TAny;
