@@ -5,13 +5,20 @@ import webidl.Data;
 typedef BuildOptions = {
 	var file : String;
 	@:optional var chopPrefix : String;
-	@:optional var jsNative : String;
+	@:optional var nativeLib : String;
+	@:optional var autoGC : Bool;
 }
 
 class Module {
 
 	public static function build( opts : BuildOptions ) {
 		var p = Context.currentPos();
+		var hl = Context.defined("hl");
+
+		if( hl && opts.nativeLib == null ) {
+			Context.error("Missing nativeLib option for HL", p);
+			return macro : Void;
+		}
 
 		// load IDL
 		var file = opts.file;
@@ -49,14 +56,32 @@ class Module {
 		function makeType( t : TypeAttr ) : haxe.macro.Expr.ComplexType {
 			return switch( t.t ) {
 			case TVoid: macro : Void;
-			case TInt, TLong, TShort: macro : Int;
-			case TFloat, TDouble: macro : Float;
+			case TInt, TLong: macro : Int;
+			case TShort: hl ? macro : hl.UI16 : macro : Int;
+			case TFloat: hl ? macro : Single : macro : Float;
+			case TDouble: macro : Float;
 			case TBool: macro : Bool;
 			case TAny: macro : webidl.Types.Any;
-			case TArray(t): macro : Dynamic; /* TODO */
+			case TArray(t):
+				var tt = makeType({ t : t, attr : [] });
+				macro : webidl.Types.NativePtr<$tt>;
 			case TVoidPtr: macro : webidl.Types.VoidPtr;
 			case TCustom(id): TPath({ pack : [], name : makeName(id) });
 			}
+		}
+
+		function defVal( t : TypeAttr ) : haxe.macro.Expr {
+			return switch( t.t ) {
+			case TVoid: throw "assert";
+			case TInt, TLong, TShort: { expr : EConst(CInt("0")), pos : p };
+			case TFloat, TDouble: { expr : EConst(CFloat("0.")), pos : p };
+			case TBool: { expr : EConst(CIdent("false")), pos : p };
+			default: { expr : EConst(CIdent("null")), pos : p };
+			}
+		}
+
+		function makeNative( name : String ) : haxe.macro.Expr.MetadataEntry {
+			return { name : ":hlNative", params : [{ expr : EConst(CString(opts.nativeLib)), pos : p },{ expr : EConst(CString(name)), pos : p }], pos : p };
 		}
 
 		for( d in decls ) {
@@ -67,8 +92,9 @@ class Module {
 				for( f in fields ) {
 					switch( f.kind ) {
 					case FMethod(args, ret):
+						var isConstr = f.name == iname;
 
-						if( f.name == iname ) {
+						if( isConstr ) {
 							if( args.length == 0 ) {
 								var otherConstructorFound = false;
 								for( f2 in fields )
@@ -96,21 +122,75 @@ class Module {
 							}
 						}
 
-						dfields.push({
+						var expr : haxe.macro.Expr = null;
+						if( hl ) {
+							if( isConstr ) {
+								var constr = "new_" + args.length;
+								var eargs : Array<haxe.macro.Expr> = [for( a in args ) { expr : EConst(CIdent(a.name)), pos : p }];
+								expr = { expr : EBinop(OpAssign, macro this, { expr : ECall({ expr : EConst(CIdent(constr)), pos:p}, eargs), pos:p}), pos : p};
+
+								dfields.push({
+									pos : p,
+									name : constr,
+									access : [AStatic],
+									meta : [makeNative(iname+"_new"+args.length)],
+									kind : FFun({
+										ret : TPath({ pack : [], name : makeName(iname) }),
+										args : [for( a in args ) { name : a.name, opt : a.opt, type : makeType(a.t) }],
+										expr : macro return null,
+									}),
+								});
+
+							} else if( ret.t == TVoid )
+								expr = { expr : EBlock([]), pos : p };
+							else
+								expr = { expr : EReturn(defVal(ret)), pos : p };
+						}
+
+						var f : haxe.macro.Expr.Field = {
 							pos : p,
-							name : f.name == iname ? "new" : f.name,
+							name : isConstr ? "new" : f.name,
+							meta : [],
+							access : [APublic],
 							kind : FFun({
 								ret : makeType(ret),
-								expr : null,
+								expr : expr,
 								args : [for( a in args ) { name : a.name, opt : a.opt, type : makeType(a.t) }],
 							}),
-						});
+						};
+						dfields.push(f);
+
+						if( hl && !isConstr )
+							f.meta.push(makeNative(iname+"_" + f.name));
+
 					case FAttribute(t):
+						var tt = makeType(t);
 						dfields.push({
 							pos : p,
 							name : f.name,
-							kind : FProp("get", "set", makeType(t)),
+							kind : FProp("get", "set", tt),
+							access : [APublic],
 						});
+						if( hl ) {
+							dfields.push({
+								pos : p,
+								name : "get_" + f.name,
+								kind : FFun({
+									ret : tt,
+									expr : macro { throw "TODO"; return cast null; },
+									args : [],
+								}),
+							});
+							dfields.push({
+								pos : p,
+								name : "set_" + f.name,
+								kind : FFun({
+									ret : tt,
+									expr : macro { throw "TODO"; return _v; },
+									args : [{ name : "_v", type : tt }],
+								}),
+							});
+						}
 					}
 				}
 				var td : haxe.macro.Expr.TypeDefinition = {
@@ -118,12 +198,12 @@ class Module {
 					pack : pack,
 					name : makeName(iname),
 					meta : [],
-					kind : TDClass(),
+					kind : hl ? TDAbstract(macro : webidl.Types.Ref, [], [macro : webidl.Types.Ref]) : TDClass(),
 					fields : dfields,
-					isExtern : true,
+					isExtern : !hl,
 				};
-				if( opts.jsNative != null )
-					td.meta.push({ name : ":native", params:[{expr:EConst(CString(opts.jsNative+iname)), pos:p}], pos:p});
+				if( !hl )
+					td.meta.push({ name : ":native", params:[{expr:EConst(CString(opts.nativeLib+"."+iname)), pos:p}], pos :p });
 				types.push(td);
 			case DImplements(name,intf):
 				var name = makeName(name);
@@ -135,6 +215,19 @@ class Module {
 						switch( t.kind ) {
 						case TDClass(null, intfs, isInt):
 							t.kind = TDClass({ pack : [], name : intf }, isInt);
+						case TDAbstract(a, _):
+							t.fields.push({
+								pos : p,
+								name : "_to" + intf,
+								meta : [{ name : ":to", pos : p }],
+								access : [AInline],
+								kind : FFun({
+									args : [],
+									expr : macro return cast this,
+									ret : TPath({ pack : [], name : intf }),
+								}),
+							});
+							// TODO : all fields needs to be inherited too !
 						default:
 							Context.warning("Cannot have " + name+" extends " + intf, p);
 						}
@@ -143,17 +236,21 @@ class Module {
 				if( !found )
 					Context.warning("Class " + name+" not found for implements " + intf, p);
 			case DEnum(name, values):
+				var index = 0;
 				types.push({
 					pos : p,
 					pack : pack,
 					name : makeName(name),
 					meta : [{ name : ":enum", pos : p }],
-					kind : TDAbstract(macro : String),
-					fields : [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(CString(v)), pos : p }) }],
+					kind : TDAbstract(hl ? macro : Int : macro : String),
+					fields : [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(hl?CInt(""+(index++)):CString(v)), pos : p }) }],
 				});
 			}
 		}
-		Context.defineModule(Context.getLocalModule(), types);
+
+		var local = Context.getLocalModule();
+		Context.defineModule(local, types);
+		Context.registerModuleDependency(local, file);
 
 		return macro : Void;
 	}
