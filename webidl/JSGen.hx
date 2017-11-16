@@ -12,7 +12,11 @@ class JSGen {
 		if( params == null )
 			params = [];
 
-		if( params.indexOf("-O1") < 0 && params.indexOf("-O2") < 0 )
+		var hasOpt = false;
+		for( p in params )
+			if( p.substr(0, 2) == "-O" )
+				hasOpt = true;
+		if( !hasOpt )
 			params.push("-O2");
 
 		var lib = opts.libName;
@@ -39,7 +43,7 @@ class JSGen {
 			var out = cfile.substr(0, -4) + ".bc";
 			var args = params.concat(["-c", cfile, "-o", out]);
 			args.unshift(Sys.getEnv("EMSDK") + "/emcc.py");
-	//		command("python", args);
+			command("python", args);
 			outFiles.push(out);
 		}
 
