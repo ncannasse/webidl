@@ -15,14 +15,16 @@ class JSGen {
 		if( params.indexOf("-O1") < 0 && params.indexOf("-O2") < 0 )
 			params.push("-O2");
 
+		var lib = opts.libName;
+
 		// generate bindings
-		command("python", [Sys.getEnv("EMSDK") + "/tools/webidl_binder.py", opts.idl, opts.libName+"_js"]);
-		var glueCpp = opts.libName+"_js.cpp";
+		command("python", [Sys.getEnv("EMSDK") + "/tools/webidl_binder.py", opts.idl, '${lib}_js']);
+		var glueCpp = '${lib}_js.cpp';
 		if( opts.includeCode != null ) {
-			sys.io.File.saveContent(opts.libName+"_wrap.cpp", opts.includeCode+'\n#include "$glueCpp"');
-			sources.push(opts.libName+"_wrap.cpp");
+			sys.io.File.saveContent('${lib}_wrap.cpp', opts.includeCode+'\n#include "$glueCpp"');
+			sources.push('${lib}_wrap.cpp');
 		} else
-			sources.push(opts.libName+"_js.cpp");
+			sources.push('${lib}_js.cpp');
 
 		// delete tmp wrapper files
 		try {
@@ -37,16 +39,17 @@ class JSGen {
 			var out = cfile.substr(0, -4) + ".bc";
 			var args = params.concat(["-c", cfile, "-o", out]);
 			args.unshift(Sys.getEnv("EMSDK") + "/emcc.py");
-			command("python", args);
+	//		command("python", args);
 			outFiles.push(out);
 		}
 
 		// link : because too many files, generate Makefile
 		var tmp = "Makefile.tmp";
 		var args = params.concat([
-			"-s", "EXPORT_NAME="+opts.libName,
-			"--post-js", opts.libName+"_js.js",
-			"-o", opts.libName+".js"
+			"-s", 'EXPORT_NAME="\'$lib\'"',
+			"--post-js", '${lib}_js.js',
+			"--memory-init-file", "0",
+			"-o", '$lib.js'
 		]);
 		var output = "SOURCES = " + outFiles.join(" ") + "\n";
 		output += "all:\n";
@@ -55,9 +58,8 @@ class JSGen {
 		command("make", ["-f", tmp]);
 		sys.FileSystem.deleteFile(tmp);
 
-		sys.FileSystem.deleteFile(opts.libName+"_js.js");
-		sys.FileSystem.deleteFile(opts.libName+"_js.cpp");
-		sys.FileSystem.deleteFile(opts.libName+".js.mem");
+		sys.FileSystem.deleteFile('${lib}_js.js');
+		sys.FileSystem.deleteFile('${lib}_js.cpp');
 		try {
 			sys.FileSystem.deleteFile(opts.libName+"_wrap.cpp");
 		} catch( e : Dynamic ) {};
