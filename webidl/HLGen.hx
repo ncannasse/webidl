@@ -2,7 +2,8 @@ package webidl;
 import webidl.Data;
 
 typedef GenerationOpts = {
-	@:optional var libName : String;
+	var idl : String;
+	var libName : String;
 	@:optional var outputFile : String;
 	@:optional var includeCode : String;
 	@:optional var autoGC : Bool;
@@ -47,8 +48,8 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 ";
 
-	public static function generate( file : String, ?opts : GenerationOpts ) {
-		if( opts == null ) opts = {};
+	public static function generate( opts : GenerationOpts ) {
+		var file = opts.idl;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
 		var decls = null;
@@ -68,8 +69,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		function add(str:String) {
 			output.add(str.split("\r\n").join("\n") + "\n");
 		}
-		if( opts.libName != null )
-			add('#define HL_NAME(x) ${opts.libName}_##x');
+		add('#define HL_NAME(x) ${opts.libName}_##x');
 		add('#include <hl.h>');
 		add('#define _IDL _BYTES');
 		add(StringTools.trim(gc ? HEADER_GC : HEADER_NO_GC));
@@ -354,7 +354,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			Sys.println("Usage: hlgen <file>");
 			Sys.exit(1);
 		}
-		generate(file);
+		generate({ idl : file, libName : file.split(".").shift() });
 	}
 
 }
