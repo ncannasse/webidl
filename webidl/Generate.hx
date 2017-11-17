@@ -9,7 +9,29 @@ typedef GenerationOpts = {
 	@:optional var autoGC : Bool;
 }
 
-class HLGen {
+class Generate {
+
+	static var HEADER_EMSCRIPTEN = "
+
+#include <emscripten.h>
+#define HL_PRIM
+#define HL_NAME(n)	EMSCRIPTEN_KEEPALIVE eb_##n
+#define DEFINE_PRIM(ret, name, args)
+#define _OPT(t) t*
+#define _GET_OPT(value,t) *value
+
+
+";
+
+	static var HEADER_HL = "
+
+#include <hl.h>
+#define _IDL _BYTES
+#define _OPT(t) vdynamic *
+#define _GET_OPT(value,t) (value)->v.t
+
+
+";
 
 	static var HEADER_NO_GC = "
 
@@ -17,6 +39,8 @@ class HLGen {
 #define alloc_ref_const(r,_) r
 #define _ref(t)			t
 #define _unref(v)		v
+#define free_ref(v) delete (v)
+#define HL_CONST const
 
 	";
 
@@ -29,10 +53,18 @@ template <typename T> struct pref {
 
 #define _ref(t) pref<t>
 #define _unref(v) v->value
+#define alloc_ref(r,t) _alloc_ref(r,finalize_##t)
 #define alloc_ref_const(r, _) _alloc_const(r)
-#define free_ref(v) delete _unref(v)
+#define HL_CONST
 
-template<typename T> pref<T> *alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
+template<typename T> void free_ref( pref<T> *r ) {
+	if( !r->finalize ) return;
+	delete r->value;
+	r->value = NULL;
+	r->finalize = NULL;
+}
+
+template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
 	pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
 	r->finalize = finalize;
 	r->value = value;
@@ -48,7 +80,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 ";
 
-	public static function generate( opts : GenerationOpts ) {
+	public static function generateCpp( opts : GenerationOpts ) {
 		var file = opts.idl;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
@@ -69,15 +101,26 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		function add(str:String) {
 			output.add(str.split("\r\n").join("\n") + "\n");
 		}
+		add("#ifdef EMSCRIPTEN");
+		add("");
+		add(StringTools.trim(HEADER_EMSCRIPTEN));
+		add(StringTools.trim(HEADER_NO_GC));
+		add("");
+		add("#else");
+		add("");
 		add('#define HL_NAME(x) ${opts.libName}_##x');
-		add('#include <hl.h>');
-		add('#define _IDL _BYTES');
+		add(StringTools.trim(HEADER_HL));
 		add(StringTools.trim(gc ? HEADER_GC : HEADER_NO_GC));
+		add("");
+		add("#endif");
 		if( opts.includeCode != null ) {
 			add("");
 			add(StringTools.trim(opts.includeCode));
 		}
 		add("");
+		add('extern "C" {');
+		add("");
+
 		var typeNames = new Map();
 		var enumNames = new Map();
 
@@ -108,12 +151,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				typeNames.set(name, { full : fullName, constructor : prefix + name });
 				if( attrs.indexOf(ANoDelete) >= 0 )
 					continue;
-				if( gc ) {
-					add('static void finalize_$name( $fullName _this ) { free_ref(_this); }');
-				} else {
-					add('HL_PRIM void HL_NAME(${name}_delete)( $fullName _this ) {\n\tdelete _this;\n}');
-					add('DEFINE_PRIM(_VOID, ${name}_delete, _IDL);');
-				}
+				add('static void finalize_$name( $fullName _this ) { free_ref(_this); }');
+				add('HL_PRIM void HL_NAME(${name}_delete)( $fullName _this ) {\n\tfree_ref(_this);\n}');
+				add('DEFINE_PRIM(_VOID, ${name}_delete, _IDL);');
 			case DEnum(name, values):
 				enumNames.set(name, true);
 				typeNames.set(name, { full : "int", constructor : null });
@@ -158,7 +198,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		}
 
 		function dynamicAccess(t) {
-			return "->v."+switch( t ) {
+			return switch( t ) {
 			case TFloat: "f";
 			case TDouble: "d";
 			case TShort: "ui16";
@@ -172,7 +212,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			var prefix = "";
 			for( a in td.attr ) {
 				switch( a ) {
-				case AConst: if( !gc ) prefix += "const ";
+				case AConst: prefix += "HL_CONST ";
 				default:
 				}
 			}
@@ -192,7 +232,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 						var isConstr = f.name == name;
 						var args = isConstr ? margs : [{ name : "_this", t : { t : TCustom(name), attr : [] }, opt : false }].concat(margs);
 						var tret = isConstr ? { t : TCustom(name), attr : [] } : ret;
-						var funName = isConstr ? name + "_new" + args.length : name + "_" + f.name;
+						var funName = name + "_" + (isConstr ? "new" + args.length : f.name + (args.length - 1));
 						output.add('HL_PRIM ${makeTypeDecl(tret)} HL_NAME($funName)(');
 						var first = true;
 						for( a in args ) {
@@ -202,7 +242,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								output.add(makeType(t) + "*");
 							default:
 								if( isDyn(a) )
-									output.add("vdynamic*");
+									output.add("_OPT("+makeType(a.t.t)+")");
 								else
 									output.add(makeType(a.t.t));
 							}
@@ -275,13 +315,15 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								case TCustom(_):
 									output.add('_unref(${a.name})');
 								default:
-									output.add(a.name);
-									if( isDyn(a) ) output.add(dynamicAccess(a.t.t));
+									if( isDyn(a) ) {
+										output.add("_GET_OPT("+a.name+","+dynamicAccess(a.t.t)+")");
+									} else
+										output.add(a.name);
 								}
 							}
 
 							if( enumName != null ) output.add(')');
-							if( refRet != null ) output.add(')),finalize_$refRet');
+							if( refRet != null ) output.add(')),$refRet');
 							add(");");
 						}
 
@@ -327,9 +369,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 						add('HL_PRIM ${makeTypeDecl(t)} HL_NAME(${name}_get_${f.name})( ${typeNames.get(name).full} _this ) {');
 						if( isVal ) {
 							var fname = typeNames.get(tname).constructor;
-							add('\treturn alloc_ref(new $fname(_unref(_this)->${f.name}),finalize_$tname);');
+							add('\treturn alloc_ref(new $fname(_unref(_this)->${f.name}),$tname);');
 						} else if( isRef )
-							add('\treturn alloc_ref${isConst?'_const':''}(_unref(_this)->${f.name},finalize_$tname);');
+							add('\treturn alloc_ref${isConst?'_const':''}(_unref(_this)->${f.name},$tname);');
 						else
 							add('\treturn _unref(_this)->${f.name};');
 						add('}');
@@ -344,17 +386,55 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case DEnum(_), DImplements(_):
 			}
 		}
+
+		add("}"); // extern C
+
 		sys.io.File.saveContent(opts.outputFile, output.toString());
 	}
 
-	public static function main() {
-		var args = Sys.args();
-		var file = args[0];
-		if( args == null ) {
-			Sys.println("Usage: hlgen <file>");
-			Sys.exit(1);
-		}
-		generate({ idl : file, libName : file.split(".").shift() });
+	static function command( cmd, args : Array<String> ) {
+		Sys.println("> " + cmd + " " + args.join(" "));
+		var ret = Sys.command(cmd, args);
+		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
+
+	public static function generateJs( opts : GenerationOpts, sources : Array<String>, ?params : Array<String> ) {
+		if( params == null )
+			params = [];
+
+		var hasOpt = false;
+		for( p in params )
+			if( p.substr(0, 2) == "-O" )
+				hasOpt = true;
+		if( !hasOpt )
+			params.push("-O2");
+
+		var lib = opts.libName;
+
+		// build sources BC files
+		var outFiles = [];
+		for( cfile in sources ) {
+			var out = cfile.substr(0, -4) + ".bc";
+			var args = params.concat(["-c", cfile, "-o", out]);
+			args.unshift(Sys.getEnv("EMSDK") + "/emcc.py");
+			command("python", args);
+			outFiles.push(out);
+		}
+
+		// link : because too many files, generate Makefile
+		var tmp = "Makefile.tmp";
+		var args = params.concat([
+			"-s", 'EXPORT_NAME="\'$lib\'"',
+			"--memory-init-file", "0",
+			"-o", '$lib.js'
+		]);
+		var output = "SOURCES = " + outFiles.join(" ") + "\n";
+		output += "all:\n";
+		output += "\tpython \"$(EMSDK)/emcc.py\" $(SOURCES) " + args.join(" ");
+		sys.io.File.saveContent(tmp, output);
+		command("make", ["-f", tmp]);
+		sys.FileSystem.deleteFile(tmp);
+	}
+
 
 }

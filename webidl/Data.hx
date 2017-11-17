@@ -14,10 +14,11 @@ typedef Field = {
 }
 
 enum FieldKind {
-	FMethod( args : Array<{ name : String, opt : Bool, t : TypeAttr}>, ret : TypeAttr );
+	FMethod( args : Array<FArg>, ret : TypeAttr );
 	FAttribute( t : TypeAttr );
 }
 
+typedef FArg = { name : String, opt : Bool, t : TypeAttr };
 typedef TypeAttr = { var t : Type; var attr : Array<Attrib>; };
 
 enum Type {
