@@ -25,6 +25,8 @@ class Parser {
 	var ops : Array<Bool>;
 	var idents : Array<Bool>;
 	var tokens : Array<Token>;
+	var pos = 0;
+	var fileName : String;
 
 	public function new() {
 		var opChars = "+*/-=!><&|^%~";
@@ -37,7 +39,9 @@ class Parser {
 			ops[opChars.charCodeAt(i)] = true;
 	}
 
-	public function parseFile( input ) {
+	public function parseFile( fileName, input ) {
+		this.fileName = fileName;
+		pos = 0;
 		line = 1;
 		char = -1;
 		tokens = [];
@@ -148,14 +152,19 @@ class Parser {
 		return t;
 	}
 
+	function makePos( pmin : Int ) {
+		return { file : fileName, line : line, pos : pmin };
+	}
+
 	function parseField() : Field {
 		var attr = attributes();
+		var pmin = this.pos;
 
 		if( maybe(TId("attribute")) ) {
 			var t = type();
 			var name = ident();
 			ensure(TSemicolon);
-			return { name : name, kind : FAttribute({ t : t, attr : attr }) };
+			return { name : name, kind : FAttribute({ t : t, attr : attr }), pos : makePos(pmin) };
 		}
 
 		var tret = type();
@@ -180,7 +189,7 @@ class Parser {
 			}
 		}
 		ensure(TSemicolon);
-		return { name : name, kind : FMethod(args, { attr : attr, t : tret }) };
+		return { name : name, kind : FMethod(args, { attr : attr, t : tret }), pos : makePos(pmin) };
 	}
 
 	// --- Lexing
@@ -243,6 +252,7 @@ class Parser {
 	}
 
 	function readChar() {
+		pos++;
 		return try input.readByte() catch( e : Dynamic ) 0;
 	}
 
@@ -413,8 +423,10 @@ class Parser {
 		var s = input;
 		if( c == '/'.code ) { // comment
 			try {
-				while( char != '\r'.code && char != '\n'.code )
+				while( char != '\r'.code && char != '\n'.code ) {
+					pos++;
 					char = s.readByte();
+				}
 				this.char = char;
 			} catch( e : Dynamic ) {
 			}
@@ -430,8 +442,10 @@ class Parser {
 				while( true ) {
 					while( char != '*'.code ) {
 						if( char == '\n'.code ) line++;
+						pos++;
 						char = s.readByte();
 					}
+					pos++;
 					char = s.readByte();
 					if( char == '/'.code )
 						break;
@@ -454,6 +468,7 @@ class Parser {
 		var s = input;
 		while( true ) {
 			try {
+				pos++;
 				c = s.readByte();
 			} catch( e : Dynamic ) {
 				line = old;

@@ -78,7 +78,14 @@ class Module {
 		return t;
 	}
 
-	function makeNativeField( iname : String, name : String, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+	function makePosition( pos : webidl.Data.Position ) {
+		if( pos == null )
+			return p;
+		return Context.makePosition({ min : pos.pos, max : pos.pos + 1, file : pos.file });
+	}
+
+	function makeNativeField( iname : String, f : webidl.Data.Field, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+		var name = f.name;
 		var isConstr = name == iname;
 		if( isConstr ) {
 			name = "new";
@@ -96,7 +103,7 @@ class Module {
 		if( isConstr ) access.push(AStatic);
 
 		return {
-			pos : p,
+			pos : makePosition(f.pos),
 			name : pub ? name : name + args.length,
 			meta : [makeNative(iname+"_" + name + (name == "delete" ? "" : ""+args.length))],
 			access : access,
@@ -141,7 +148,7 @@ class Module {
 
 					if( vars.length == 1 && !isConstr ) {
 
-						var f = makeNativeField(iname, f.name, vars[0].args, vars[0].ret, true);
+						var f = makeNativeField(iname, f, vars[0].args, vars[0].ret, true);
 						dfields.push(f);
 
 
@@ -187,7 +194,7 @@ class Module {
 						// native impls
 						var retTypes : Array<{t:TypeAttr,sign:String}> = [];
 						for( v in vars ) {
-							var f = makeNativeField(iname, f.name, v.args, v.ret, false );
+							var f = makeNativeField(iname, f, v.args, v.ret, false );
 
 							var sign = haxe.Serializer.run(v.ret);
 							var found = false;
@@ -224,7 +231,7 @@ class Module {
 
 						dfields.push({
 							name : isConstr ? "new" : f.name,
-							pos : p,
+							pos : makePosition(f.pos),
 							access : [APublic, AInline],
 							kind : FFun({
 								expr : expr,
@@ -275,7 +282,7 @@ class Module {
 			};
 
 			if( attrs.indexOf(ANoDelete) < 0 )
-				dfields.push(makeNativeField(iname, "delete", [], { t : TVoid, attr : [] }, true));
+				dfields.push(makeNativeField(iname, { name : "delete", pos : null, kind : null }, [], { t : TVoid, attr : [] }, true));
 
 			if( !hl ) {
 				for( f in dfields )
@@ -306,8 +313,6 @@ class Module {
 				if( t.name == name ) {
 					found = true;
 					switch( t.kind ) {
-					case TDClass(null, intfs, isInt):
-						t.kind = TDClass({ pack : [], name : intf }, isInt);
 					case TDAbstract(a, _):
 						t.fields.push({
 							pos : p,
@@ -320,7 +325,22 @@ class Module {
 								ret : TPath({ pack : [], name : intf }),
 							}),
 						});
-						// TODO : all fields needs to be inherited too !
+
+						var toImpl = [intf];
+						while( toImpl.length > 0 ) {
+							var intf = toImpl.pop();
+							var td = null;
+							for( t2 in types ) {
+								if( t2.name == intf )
+									switch( t2.kind ) {
+									case TDAbstract(a2, _, to):
+										// TODO : copy fields !
+									default:
+									}
+							}
+						}
+
+
 					default:
 						Context.warning("Cannot have " + name+" extends " + intf, p);
 					}
@@ -362,7 +382,7 @@ class Module {
 		var parse = new webidl.Parser();
 		var decls = null;
 		try {
-			decls = parse.parseFile(new haxe.io.BytesInput(content));
+			decls = parse.parseFile(file,new haxe.io.BytesInput(content));
 		} catch( msg : String ) {
 			var lines = content.toString().split("\n");
 			var start = lines.slice(0, parse.line-1).join("\n").length + 1;

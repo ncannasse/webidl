@@ -2,6 +2,12 @@ package webidl;
 
 typedef Data = Array<Definition>;
 
+typedef Position = {
+	var file : String;
+	var line : Int;
+	var pos : Int;
+}
+
 enum Definition {
 	DInterface( name : String, attrs : Array<Attrib>, fields : Array<Field> );
 	DImplements( type : String, interfaceName : String );
@@ -11,6 +17,7 @@ enum Definition {
 typedef Field = {
 	var name : String;
 	var kind : FieldKind;
+	var pos : Position;
 }
 
 enum FieldKind {
