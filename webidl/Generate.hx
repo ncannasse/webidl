@@ -402,12 +402,13 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		var lib = opts.nativeLib;
 
-		var emSdk = Sys.getEnv("EMSDK");
+		var emSdk = Sys.getEnv("EMSCRIPTEN");
 		if( emSdk == null )
-			throw "Missing EMSDK environment variable. Install emscripten";
+			throw "Missing EMSCRIPTEN environment variable. Install emscripten";
 
 		// build sources BC files
 		var outFiles = [];
+		sources.push(lib+".cpp");
 		for( cfile in sources ) {
 			var out = cfile.substr(0, -4) + ".bc";
 			var args = params.concat(["-c", cfile, "-o", out]);
@@ -425,7 +426,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		]);
 		var output = "SOURCES = " + outFiles.join(" ") + "\n";
 		output += "all:\n";
-		output += "\tpython \"$(EMSDK)/emcc.py\" $(SOURCES) " + args.join(" ");
+		output += "\tpython \"$(EMSCRIPTEN)/emcc.py\" $(SOURCES) " + args.join(" ");
 		sys.io.File.saveContent(tmp, output);
 		command("make", ["-f", tmp]);
 		sys.FileSystem.deleteFile(tmp);

@@ -1,0 +1,6 @@
+/sample/libpoint.*
+*.obj
+*.o
+*.hl
+*.js
+*.bc
