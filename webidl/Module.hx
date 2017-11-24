@@ -248,18 +248,20 @@ class Module {
 					dfields.push({
 						pos : p,
 						name : "get_" + f.name,
+						meta : [makeNative(iname+"_get_" + f.name)],
 						kind : FFun({
 							ret : tt,
-							expr : macro { throw "TODO"; return cast null; },
+							expr : macro return ${defVal(t)},
 							args : [],
 						}),
 					});
 					dfields.push({
 						pos : p,
 						name : "set_" + f.name,
+						meta : [makeNative(iname+"_set_" + f.name)],
 						kind : FFun({
 							ret : tt,
-							expr : macro { throw "TODO"; return _v; },
+							expr : macro return ${defVal(t)},
 							args : [{ name : "_v", type : tt }],
 						}),
 					});

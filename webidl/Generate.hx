@@ -362,9 +362,14 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 							add('\treturn _unref(_this)->${f.name};');
 						add('}');
 
-						add('HL_PRIM void HL_NAME(${name}_set_${f.name})( ${typeNames.get(name).full} _this, ${makeTypeDecl(t)} value ) {');
+						add('HL_PRIM ${makeTypeDecl(t)} HL_NAME(${name}_set_${f.name})( ${typeNames.get(name).full} _this, ${makeTypeDecl(t)} value ) {');
 						add('\t_unref(_this)->${f.name} = ${isVal?"*":""}${isRef?"_unref":""}(value);');
+						add('\treturn value;');
 						add('}');
+
+						var td = defType(t.t);
+						add('DEFINE_PRIM($td,${name}_get_${f.name},_IDL);');
+						add('DEFINE_PRIM($td,${name}_set_${f.name},_IDL $td);');
 						add('');
 					}
 				}
@@ -396,7 +401,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			params.push("-O2");
 
 		var lib = opts.nativeLib;
-		
+
 		var emSdk = Sys.getEnv("EMSDK");
 		if( emSdk == null )
 			throw "Missing EMSDK environment variable. Install emscripten";
