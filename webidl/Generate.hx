@@ -1,14 +1,6 @@
 package webidl;
 import webidl.Data;
 
-typedef GenerationOpts = {
-	var idl : String;
-	var libName : String;
-	@:optional var outputFile : String;
-	@:optional var includeCode : String;
-	@:optional var autoGC : Bool;
-}
-
 class Generate {
 
 	static var HEADER_EMSCRIPTEN = "
@@ -80,22 +72,16 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 ";
 
-	public static function generateCpp( opts : GenerationOpts ) {
-		var file = opts.idl;
+	public static function generateCpp( opts : Options ) {
+		var file = opts.idlFile;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
 		var decls = null;
 		var gc = opts.autoGC;
 		try {
-			decls = parse.parseFile(new haxe.io.BytesInput(content));
+			decls = parse.parseFile(file, new haxe.io.BytesInput(content));
 		} catch( msg : String ) {
 			throw msg + "(" + file+" line " + parse.line+")";
-		}
-		if( opts.outputFile == null ) {
-			var parts = file.split(".");
-			parts.pop();
-			parts.push("cpp");
-			opts.outputFile = parts.join(".");
 		}
 		var output = new StringBuf();
 		function add(str:String) {
@@ -108,7 +94,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		add("");
 		add("#else");
 		add("");
-		add('#define HL_NAME(x) ${opts.libName}_##x');
+		add('#define HL_NAME(x) ${opts.nativeLib}_##x');
 		add(StringTools.trim(HEADER_HL));
 		add(StringTools.trim(gc ? HEADER_GC : HEADER_NO_GC));
 		add("");
@@ -389,7 +375,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		add("}"); // extern C
 
-		sys.io.File.saveContent(opts.outputFile, output.toString());
+		sys.io.File.saveContent(opts.nativeLib+".cpp", output.toString());
 	}
 
 	static function command( cmd, args : Array<String> ) {
@@ -398,7 +384,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
 
-	public static function generateJs( opts : GenerationOpts, sources : Array<String>, ?params : Array<String> ) {
+	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
 		if( params == null )
 			params = [];
 
@@ -409,14 +395,18 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( !hasOpt )
 			params.push("-O2");
 
-		var lib = opts.libName;
+		var lib = opts.nativeLib;
+		
+		var emSdk = Sys.getEnv("EMSDK");
+		if( emSdk == null )
+			throw "Missing EMSDK environment variable. Install emscripten";
 
 		// build sources BC files
 		var outFiles = [];
 		for( cfile in sources ) {
 			var out = cfile.substr(0, -4) + ".bc";
 			var args = params.concat(["-c", cfile, "-o", out]);
-			args.unshift(Sys.getEnv("EMSDK") + "/emcc.py");
+			args.unshift(emSdk + "/emcc.py");
 			command("python", args);
 			outFiles.push(out);
 		}

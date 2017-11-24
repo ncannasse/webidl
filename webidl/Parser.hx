@@ -39,7 +39,7 @@ class Parser {
 			ops[opChars.charCodeAt(i)] = true;
 	}
 
-	public function parseFile( fileName, input ) {
+	public function parseFile( fileName : String, input : haxe.io.Input ) {
 		this.fileName = fileName;
 		pos = 0;
 		line = 1;

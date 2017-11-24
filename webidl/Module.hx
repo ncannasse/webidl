@@ -4,19 +4,12 @@ import webidl.Data;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
-typedef BuildOptions = {
-	var file : String;
-	@:optional var chopPrefix : String;
-	@:optional var nativeLib : String;
-	@:optional var autoGC : Bool;
-}
-
 class Module {
 
 	var p : Position;
 	var hl : Bool;
 	var pack : Array<String>;
-	var opts : BuildOptions;
+	var opts : Options;
 	var types : Array<TypeDefinition> = [];
 
 	function new(p, pack, hl, opts) {
@@ -27,7 +20,7 @@ class Module {
 	}
 
 	function makeName( name : String ) {
-		if( StringTools.startsWith(name, opts.chopPrefix) ) name = name.substr(opts.chopPrefix.length);
+		if( opts.chopPrefix != null && StringTools.startsWith(name, opts.chopPrefix) ) name = name.substr(opts.chopPrefix.length);
 		return name;
 	}
 
@@ -361,7 +354,7 @@ class Module {
 		}
 	}
 
-	public static function build( opts : BuildOptions ) {
+	public static function build( opts : Options ) {
 		var p = Context.currentPos();
 		var hl = Context.defined("hl");
 		if( hl && opts.nativeLib == null ) {
@@ -369,9 +362,9 @@ class Module {
 			return macro : Void;
 		}
 		// load IDL
-		var file = opts.file;
+		var file = opts.idlFile;
 		var content = try {
-			file = Context.resolvePath(opts.file);
+			file = Context.resolvePath(file);
 			sys.io.File.getBytes(file);
 		} catch( e : Dynamic ) {
 			Context.error("" + e, p);
