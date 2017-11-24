@@ -284,6 +284,7 @@ class Module {
 					if( f.meta != null )
 						for( m in f.meta )
 							if( m.name == ":hlNative" ) {
+								if( f.access == null ) f.access = [];
 								switch( f.kind ) {
 								case FFun(df):
 									var call = "_eb_" + switch( m.params[1].expr ) { case EConst(CString(name)): name; default: throw "!"; };
