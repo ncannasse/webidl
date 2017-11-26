@@ -429,7 +429,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		output += "\t"+emcc+" $(SOURCES) " + args.join(" ");
 		sys.io.File.saveContent(tmp, output);
 		command("make", ["-f", tmp]);
-		//sys.FileSystem.deleteFile(tmp);
+		sys.FileSystem.deleteFile(tmp);
 	}
 
 
