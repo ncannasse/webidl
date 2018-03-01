@@ -109,7 +109,8 @@ class Module {
 	}
 
 	function buildDecl( d : Definition ) {
-		switch( d ) {
+		var p = makePosition(d.pos);
+		switch( d.kind ) {
 		case DInterface(iname, attrs, fields):
 			var dfields : Array<Field> = [];
 

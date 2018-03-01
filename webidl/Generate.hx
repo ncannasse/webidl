@@ -112,7 +112,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		// ignore "JSImplementation" interfaces (?)
 		for( d in decls.copy() )
-			switch( d ) {
+			switch( d.kind ) {
 			case DInterface(_, attrs, _):
 				for( a in attrs )
 					switch( a ) {
@@ -125,7 +125,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			}
 
 		for( d in decls ) {
-			switch( d ) {
+			switch( d.kind ) {
 			case DInterface(name, attrs, _):
 				var prefix = "";
 				for( a in attrs )
@@ -210,7 +210,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		}
 
 		for( d in decls ) {
-			switch( d ) {
+			switch( d.kind ) {
 			case DInterface(name, attrs, fields):
 				for( f in fields ) {
 					switch( f.kind ) {
