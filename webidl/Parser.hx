@@ -58,6 +58,7 @@ class Parser {
 
 	function parseDecl() {
 		var attr = attributes();
+		var pmin = this.pos;
 		switch( token() ) {
 		case TId("interface"):
 			var name = ident();
@@ -70,7 +71,7 @@ class Parser {
 				fields.push(parseField());
 			}
 			ensure(TSemicolon);
-			return DInterface(name, attr, fields);
+			return { pos : makePos(pmin), kind : DInterface(name, attr, fields) };
 		case TId("enum"):
 			var name = ident();
 			ensure(TBrOpen);
@@ -88,14 +89,14 @@ class Parser {
 					}
 				}
 			ensure(TSemicolon);
-			return DEnum(name, values);
+			return { pos : makePos(pmin), kind : DEnum(name, values) };
 		case TId(name):
 			if( attr.length > 0 )
 				throw "assert";
 			ensure(TId("implements"));
 			var intf = ident();
 			ensure(TSemicolon);
-			return DImplements(name, intf);
+			return { pos : makePos(pmin), kind : DImplements(name, intf) };
 
 		case var tk:
 			return unexpected(tk);

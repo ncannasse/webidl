@@ -8,7 +8,12 @@ typedef Position = {
 	var pos : Int;
 }
 
-enum Definition {
+typedef Definition = {
+	var pos : Position;
+	var kind : DefinitionKind;
+}
+
+enum DefinitionKind {
 	DInterface( name : String, attrs : Array<Attrib>, fields : Array<Field> );
 	DImplements( type : String, interfaceName : String );
 	DEnum( name : String, values : Array<String> );
