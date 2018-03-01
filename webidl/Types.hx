@@ -3,7 +3,7 @@ package webidl;
 abstract Ref(#if hl hl.Bytes #else Dynamic #end) {
 }
 
-abstract Any(Dynamic) {
+abstract Any(#if hl hl.Bytes #else Dynamic #end) {
 }
 
 abstract VoidPtr(#if hl hl.Bytes #else Dynamic #end) {
