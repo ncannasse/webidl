@@ -331,7 +331,20 @@ class Module {
 								if( t2.name == intf )
 									switch( t2.kind ) {
 									case TDAbstract(a2, _, to):
-										// TODO : copy fields !
+										for ( inheritedField in t2.fields ) {
+											// Search for existing field
+											var fieldExists = false;
+											for ( existingField in t.fields ) {
+												if ( inheritedField.name == existingField.name ) {
+													fieldExists = true;
+													break;
+												}
+											}
+
+											if ( !fieldExists ) {
+												t.fields.push(inheritedField);
+											}
+										}
 									default:
 									}
 							}
