@@ -295,7 +295,7 @@ class Module {
 									df.expr = macro return untyped $i{call}($a{args});
 								default: throw "assert";
 								}
-								f.access.push(AInline);
+								if (f.access.indexOf(AInline) == -1) f.access.push(AInline);
 								f.meta.remove(m);
 								break;
 							}
