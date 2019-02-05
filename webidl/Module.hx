@@ -288,7 +288,7 @@ class Module {
 								if( f.access == null ) f.access = [];
 								switch( f.kind ) {
 								case FFun(df):
-									var call = "_eb_" + switch( m.params[1].expr ) { case EConst(CString(name)): name; default: throw "!"; };
+									var call = opts.nativeLib + "._eb_" + switch( m.params[1].expr ) { case EConst(CString(name)): name; default: throw "!"; };
 									var args : Array<Expr> = [for( a in df.args ) { expr : EConst(CIdent(a.name)), pos : p }];
 									if( f.access.indexOf(AStatic) < 0 )
 										args.unshift(macro this);
@@ -410,6 +410,16 @@ class Module {
 		var module = Context.getLocalModule();
 		var types = buildTypes(opts, Context.defined("hl"));
 		if (types == null) return macro : Void;
+
+		// Add an init function for initializing the JS module
+		if (Context.defined("js")) {
+			types.push(macro class Js {
+				public static function init(onReady:Void->Void) {
+					untyped __js__('${opts.nativeLib} = ${opts.nativeLib}().then(onReady)');
+				}
+			});
+		}
+
 		Context.defineModule(module, types);
 		Context.registerModuleDependency(module, file);
 

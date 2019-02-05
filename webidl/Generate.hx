@@ -420,7 +420,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		// link : because too many files, generate Makefile
 		var tmp = "Makefile.tmp";
 		var args = params.concat([
-			"-s", 'EXPORT_NAME="\'$lib\'"',
+			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
 			"--memory-init-file", "0",
 			"-o", '$lib.js'
 		]);
