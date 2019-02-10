@@ -1,16 +1,11 @@
 import SampleModule.Point;
-import SampleModule.Js as SampleModuleJs;
+import SampleModule.Init as SampleModuleInit;
 
 class Sample {
 
 	public static function main() {
-		#if js
-		SampleModuleJs.init(startApp);
-		#else
-		startApp();
-		#end
+		SampleModuleInit.init(startApp);
 	}
-
 
 	public static function startApp() {
 		var p1 = new Point();		
