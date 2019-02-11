@@ -1,9 +1,14 @@
 import SampleModule.Point;
+import SampleModule.Init as SampleModuleInit;
 
 class Sample {
 
 	public static function main() {
-		var p1 = new Point();
+		SampleModuleInit.init(startApp);
+	}
+
+	public static function startApp() {
+		var p1 = new Point();		
 		p1.x = 4;
 		p1.y = 5;
 		var p2 = new Point(7,8);
@@ -13,5 +18,4 @@ class Sample {
 		p2.delete();
 		p.delete();
 	}
-	
 }
