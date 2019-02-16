@@ -9,6 +9,7 @@ clean:
 	if [ -f $(OUT)libpoint.wasm ]; then rm $(OUT)libpoint.wasm; fi;
 	if [ -f $(OUT)splitout.js ]; then rm $(OUT)splitout.js; fi;
 	if [ -f $(OUT)point.bc ]; then rm $(OUT)point.bc; fi;
+	if [ -f $(OUT)context.bc ]; then rm $(OUT)context.bc; fi;
 
 libpoint.cpp:
 	haxe -lib webidl --macro "SplitoutModule.buildLibCpp()"
