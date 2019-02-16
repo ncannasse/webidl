@@ -1,7 +1,7 @@
 {
     "idlFile": "point.idl",
     "nativeLib": "libpoint",
-    "includeCode": "#include \"point.h\"",
+    "sourceFiles": ["point.cpp"],
     "autoGC": false,
     "out": "./webRoot"
 }

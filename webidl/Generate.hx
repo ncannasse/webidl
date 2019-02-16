@@ -2,77 +2,66 @@ package webidl;
 import webidl.Data;
 
 class Generate {
-
 	static var HEADER_EMSCRIPTEN = "
-
-#include <emscripten.h>
-#define HL_PRIM
-#define HL_NAME(n)	EMSCRIPTEN_KEEPALIVE eb_##n
-#define DEFINE_PRIM(ret, name, args)
-#define _OPT(t) t*
-#define _GET_OPT(value,t) *value
-
-
-";
+		#include <emscripten.h>
+		#define HL_PRIM
+		#define HL_NAME(n)	EMSCRIPTEN_KEEPALIVE eb_##n
+		#define DEFINE_PRIM(ret, name, args)
+		#define _OPT(t) t*
+		#define _GET_OPT(value,t) *value
+		";
 
 	static var HEADER_HL = "
-
-#include <hl.h>
-#define _IDL _BYTES
-#define _OPT(t) vdynamic *
-#define _GET_OPT(value,t) (value)->v.t
-
-
-";
+		#include <hl.h>
+		#define _IDL _BYTES
+		#define _OPT(t) vdynamic *
+		#define _GET_OPT(value,t) (value)->v.t
+		";
 
 	static var HEADER_NO_GC = "
-
-#define alloc_ref(r, _) r
-#define alloc_ref_const(r,_) r
-#define _ref(t)			t
-#define _unref(v)		v
-#define free_ref(v) delete (v)
-#define HL_CONST const
-
+		#define alloc_ref(r, _) r
+		#define alloc_ref_const(r,_) r
+		#define _ref(t)			t
+		#define _unref(v)		v
+		#define free_ref(v) delete (v)
+		#define HL_CONST const
 	";
 
 	static var HEADER_GC = "
+		template <typename T> struct pref {
+			void *finalize;
+			T *value;
+		};
 
-template <typename T> struct pref {
-	void *finalize;
-	T *value;
-};
+		#define _ref(t) pref<t>
+		#define _unref(v) v->value
+		#define alloc_ref(r,t) _alloc_ref(r,finalize_##t)
+		#define alloc_ref_const(r, _) _alloc_const(r)
+		#define HL_CONST
 
-#define _ref(t) pref<t>
-#define _unref(v) v->value
-#define alloc_ref(r,t) _alloc_ref(r,finalize_##t)
-#define alloc_ref_const(r, _) _alloc_const(r)
-#define HL_CONST
+		template<typename T> void free_ref( pref<T> *r ) {
+			if( !r->finalize ) return;
+			delete r->value;
+			r->value = NULL;
+			r->finalize = NULL;
+		}
 
-template<typename T> void free_ref( pref<T> *r ) {
-	if( !r->finalize ) return;
-	delete r->value;
-	r->value = NULL;
-	r->finalize = NULL;
-}
+		template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
+			pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
+			r->finalize = finalize;
+			r->value = value;
+			return r;
+		}
 
-template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
-	r->finalize = finalize;
-	r->value = value;
-	return r;
-}
+		template<typename T> pref<T> *_alloc_const( const T *value ) {
+			pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(r));
+			r->finalize = NULL;
+			r->value = (T*)value;
+			return r;
+		}
+		";
 
-template<typename T> pref<T> *_alloc_const( const T *value ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(r));
-	r->finalize = NULL;
-	r->value = (T*)value;
-	return r;
-}
-
-";
-
-	public static function generateCpp( opts : Options ) {
+	public static function generateCpp(opts : Options) {
 		var file = opts.idlFile;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
@@ -99,10 +88,23 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		add(StringTools.trim(gc ? HEADER_GC : HEADER_NO_GC));
 		add("");
 		add("#endif");
-		if( opts.includeCode != null ) {
+
+		/* Handle Includes **/
+		for(sFile in opts.sourceFiles){
+			var sourcePath = if(sys.FileSystem.exists(opts.out+ "/" + sFile)){
+				opts.out + "/" + sFile;
+			} else { sFile; }
+			var source = sys.io.File.getBytes(sourcePath).toString();
+			var lines = source.split("\n");
+
 			add("");
-			add(StringTools.trim(opts.includeCode));
+			for(l in lines){
+				if(StringTools.startsWith(l, "#include")){
+					add(StringTools.trim(l));
+				}
+			}
 		}
+
 		add("");
 		add('extern "C" {');
 		add("");
@@ -390,7 +392,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
 
-	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
+	public static function generateJs(opts : Options, ?params : Array<String>) {
+		var sources = opts.sourceFiles;
+
 		if( params == null )
 			params = [];
 

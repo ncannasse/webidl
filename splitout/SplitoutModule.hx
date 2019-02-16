@@ -10,7 +10,7 @@ class SplitoutModule {
 		obj;
 	}
 
-	static var config : webidl.Options = json;
+	static var config: webidl.Options = json;
 	
 	public static function build() {
 		return webidl.Module.build(config);
@@ -21,16 +21,8 @@ class SplitoutModule {
 	}
 	
 	public static function buildLibJS() {
-		var sourceFiles = ["point.cpp"];
-		webidl.Generate.generateJs(config, sourceFiles);
+		webidl.Generate.generateJs(config);
 	}
 }
 
 #end
-
-//static var config : webidl.Options = {
-//	idlFile : "point.idl",
-//	nativeLib : "libpoint",
-//	includeCode : "#include \"point.h\"",
-//	autoGC : false,
-//};
