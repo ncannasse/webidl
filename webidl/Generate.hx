@@ -371,6 +371,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 						add('DEFINE_PRIM($td,${name}_get_${f.name},_IDL);');
 						add('DEFINE_PRIM($td,${name}_set_${f.name},_IDL $td);');
 						add('');
+					case DConst(_, _, _):
 					}
 				}
 

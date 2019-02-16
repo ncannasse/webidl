@@ -168,6 +168,15 @@ class Parser {
 			return { name : name, kind : FAttribute({ t : t, attr : attr }), pos : makePos(pmin) };
 		}
 
+		if( maybe(TId("const")) ) {
+			var type = type();
+			var name = ident();
+			ensure(TOp("="));
+			var value = tokenString(token());
+			ensure(TSemicolon);
+			return { name: name, kind : DConst(name, type, value), pos : makePos(pmin) };
+		}
+
 		var tret = type();
 		var name = ident();
 		ensure(TPOpen);
