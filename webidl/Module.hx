@@ -266,6 +266,16 @@ class Module {
 							args : [{ name : "_v", type : tt }],
 						}),
 					});
+				case DConst(name, type, value):
+					dfields.push({
+						pos : p,
+						name : name,
+						access : [APublic, AStatic, AInline],
+						kind : FVar(
+							makeType({t : type, attr : []}),
+							macro $i{value}
+						)
+					});
 				}
 			}
 			var td : TypeDefinition = {
