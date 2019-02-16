@@ -26,10 +26,10 @@ HLPATH = /path/to/hl
 endif
 
 libpoint.hdll: libpoint.cpp
-	$(CC) -o libpoint.hdll -shared -Wall -O3 -I . -I $(HLPATH) libpoint.cpp point.cpp -lstdc++ -lhl
+	$(CC) -o libpoint.hdll -shared -Wall -O3 -I . -I $(HLPATH) libpoint.cpp point.cpp context.cpp -lstdc++ -lhl
 
 libpoint_win: libpoint.cpp
-	cl /olibpoint.hdll /LD /EHsc /I $(HLPATH) /DYNAMICBASE libhl.lib libpoint.cpp point.cpp
+	cl /olibpoint.hdll /LD /EHsc /I $(HLPATH) /DYNAMICBASE libhl.lib libpoint.cpp point.cpp context.cpp
 	
 hl:	libpoint.hdll
 	haxe -hl splitout.hl -lib webidl -main Splitout

@@ -89,16 +89,12 @@ class Generate {
 		add("");
 		add("#endif");
 
-		/* Handle Includes **/
+		/* Handle Includes TODO@Wolfie -> Dedup? **/
 		for(sFile in opts.sourceFiles){
-			var sourcePath = if(sys.FileSystem.exists(opts.out+ "/" + sFile)){
-				opts.out + "/" + sFile;
-			} else { sFile; }
-			var source = sys.io.File.getBytes(sourcePath).toString();
-			var lines = source.split("\n");
-
 			add("");
-			for(l in lines){
+			for(l in sys.io.File.getBytes(if(sys.FileSystem.exists(opts.out+ "/" + sFile)){
+				opts.out + "/" + sFile;
+			} else { sFile; }).toString().split("\n")){
 				if(StringTools.startsWith(l, "#include")){
 					add(StringTools.trim(l));
 				}

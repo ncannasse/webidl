@@ -1,4 +1,5 @@
 import SplitoutModule.Point;
+import SplitoutModule.Context;
 import SplitoutModule.Init as SplitoutModuleInit;
 
 class Splitout {
@@ -17,5 +18,8 @@ class Splitout {
 		p1.delete();
 		p2.delete();
 		p.delete();
+
+		var c1 = new Context();
+		c1.test();
 	}
 }

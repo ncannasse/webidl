@@ -7,3 +7,8 @@ interface Point {
 	[Operator="*",Ref] Point op_add( [Const,Ref] Point p );
 	double length();
 };
+
+interface Context {
+	void Context();
+    void test();
+};

@@ -1,4 +1,0 @@
-interface Context {
-	void Context();
-    void test();
-};

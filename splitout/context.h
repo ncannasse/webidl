@@ -3,7 +3,7 @@
 class Context {
 public:
     Context(){
-        printf("%s", "This is Context!");
+        printf("%s\n", "This is Context!");
     }
     void test();
-}
+};
