@@ -380,7 +380,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		add("}"); // extern C
 
-		sys.io.File.saveContent(opts.nativeLib+".cpp", output.toString());
+		sys.io.File.saveContent(opts.out + "/" + opts.nativeLib+".cpp", output.toString());
 	}
 
 	static function command( cmd, args : Array<String> ) {
@@ -411,18 +411,26 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		var outFiles = [];
 		sources.push(lib+".cpp");
 		for( cfile in sources ) {
-			var out = cfile.substr(0, -4) + ".bc";
-			var args = params.concat(["-c", cfile, "-o", out]);
+			var sourcePath = if(sys.FileSystem.exists(opts.out+ "/" + cfile)){
+				opts.out + "/" + cfile;
+			} else { cfile; }
+
+			//var out = cfile.substr(0, -4) + ".bc";
+			var out = opts.out + "/" + cfile.substr(0, -4) + ".bc";
+			//var args = params.concat(["-c", cfile, "-o", out]);
+			var args = params.concat(["-c", sourcePath, "-o", out, "-I" + Sys.getCwd()]);
 			command( emcc, args);
 			outFiles.push(out);
 		}
 
 		// link : because too many files, generate Makefile
 		var tmp = "Makefile.tmp";
+		var libPath = opts.out + "/" + lib;
+
 		var args = params.concat([
 			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
 			"--memory-init-file", "0",
-			"-o", '$lib.js'
+			"-o", '$libPath.js'
 		]);
 		var output = "SOURCES = " + outFiles.join(" ") + "\n";
 		output += "all:\n";
@@ -430,7 +438,6 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		sys.io.File.saveContent(tmp, output);
 		command("make", ["-f", tmp]);
 		sys.FileSystem.deleteFile(tmp);
+		sys.io.File.copy("index.html", opts.out+"/index.html");
 	}
-
-
 }

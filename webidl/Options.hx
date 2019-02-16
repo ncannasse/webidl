@@ -6,4 +6,5 @@ typedef Options = {
 	@:optional var includeCode : String;
 	@:optional var chopPrefix : String;
 	@:optional var autoGC : Bool;
+	@:optional var out: String;
 }

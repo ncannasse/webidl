@@ -1,0 +1,10 @@
+
+interface Point {
+	attribute long x;
+	attribute long y;
+	void Point();
+	void Point( long x, long y );
+	[Operator="*",Ref] Point op_add( [Const,Ref] Point p );
+	double length();
+};
+
