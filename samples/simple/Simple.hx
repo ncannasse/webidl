@@ -1,13 +1,15 @@
-import SampleModule.Point;
-import SampleModule.Init as SampleModuleInit;
+import SimpleModule.Point;
+import SimpleModule.Context;
+import SimpleModule.Init as SimpleModuleInit;
 
-class Sample {
+class Simple {
 
 	public static function main() {
-		SampleModuleInit.init(startApp);
+		SimpleModuleInit.init(startApp);
 	}
 
 	public static function startApp() {
+		/** Point */
 		var p1 = new Point();		
 		p1.x = 4;
 		p1.y = 5;
@@ -17,5 +19,9 @@ class Sample {
 		p1.delete();
 		p2.delete();
 		p.delete();
+
+		/** Context */
+		var context = new Context();
+		context.test();
 	}
 }
