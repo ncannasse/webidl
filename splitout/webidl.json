@@ -1,7 +1,0 @@
-{
-    "idlFile": "point.idl",
-    "nativeLib": "libpoint",
-    "sourceFiles": ["point.cpp", "context.cpp"],
-    "autoGC": false,
-    "out": "./webRoot"
-}

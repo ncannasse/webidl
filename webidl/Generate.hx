@@ -399,7 +399,7 @@ class Generate {
 			if( p.substr(0, 2) == "-O" )
 				hasOpt = true;
 		if( !hasOpt )
-			params.push("-O2");
+			params.push("-O0");
 
 		var lib = opts.nativeLib;
 
@@ -416,9 +416,7 @@ class Generate {
 				opts.out + "/" + cfile;
 			} else { cfile; }
 
-			//var out = cfile.substr(0, -4) + ".bc";
 			var out = opts.out + "/" + cfile.substr(0, -4) + ".bc";
-			//var args = params.concat(["-c", cfile, "-o", out]);
 			var args = params.concat(["-c", sourcePath, "-o", out, "-I" + Sys.getCwd()]);
 			command( emcc, args);
 			outFiles.push(out);
@@ -429,7 +427,8 @@ class Generate {
 		var libPath = opts.out + "/" + lib;
 
 		var args = params.concat([
-			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
+			//"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1", "-O0", "-s", "USE_WEBGL2=1", "-s", "FULL_ES3=1", "-s", "NO_EXIT_RUNTIME=1",
+			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1", "-O0", "-s", "NO_EXIT_RUNTIME=1",
 			"--memory-init-file", "0",
 			"-o", '$libPath.js'
 		]);
