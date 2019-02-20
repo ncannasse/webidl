@@ -2,77 +2,66 @@ package webidl;
 import webidl.Data;
 
 class Generate {
-
 	static var HEADER_EMSCRIPTEN = "
-
-#include <emscripten.h>
-#define HL_PRIM
-#define HL_NAME(n)	EMSCRIPTEN_KEEPALIVE eb_##n
-#define DEFINE_PRIM(ret, name, args)
-#define _OPT(t) t*
-#define _GET_OPT(value,t) *value
-
-
-";
+		#include <emscripten.h>
+		#define HL_PRIM
+		#define HL_NAME(n)	EMSCRIPTEN_KEEPALIVE eb_##n
+		#define DEFINE_PRIM(ret, name, args)
+		#define _OPT(t) t*
+		#define _GET_OPT(value,t) *value
+		";
 
 	static var HEADER_HL = "
-
-#include <hl.h>
-#define _IDL _BYTES
-#define _OPT(t) vdynamic *
-#define _GET_OPT(value,t) (value)->v.t
-
-
-";
+		#include <hl.h>
+		#define _IDL _BYTES
+		#define _OPT(t) vdynamic *
+		#define _GET_OPT(value,t) (value)->v.t
+		";
 
 	static var HEADER_NO_GC = "
-
-#define alloc_ref(r, _) r
-#define alloc_ref_const(r,_) r
-#define _ref(t)			t
-#define _unref(v)		v
-#define free_ref(v) delete (v)
-#define HL_CONST const
-
+		#define alloc_ref(r, _) r
+		#define alloc_ref_const(r,_) r
+		#define _ref(t)			t
+		#define _unref(v)		v
+		#define free_ref(v) delete (v)
+		#define HL_CONST const
 	";
 
 	static var HEADER_GC = "
+		template <typename T> struct pref {
+			void *finalize;
+			T *value;
+		};
 
-template <typename T> struct pref {
-	void *finalize;
-	T *value;
-};
+		#define _ref(t) pref<t>
+		#define _unref(v) v->value
+		#define alloc_ref(r,t) _alloc_ref(r,finalize_##t)
+		#define alloc_ref_const(r, _) _alloc_const(r)
+		#define HL_CONST
 
-#define _ref(t) pref<t>
-#define _unref(v) v->value
-#define alloc_ref(r,t) _alloc_ref(r,finalize_##t)
-#define alloc_ref_const(r, _) _alloc_const(r)
-#define HL_CONST
+		template<typename T> void free_ref( pref<T> *r ) {
+			if( !r->finalize ) return;
+			delete r->value;
+			r->value = NULL;
+			r->finalize = NULL;
+		}
 
-template<typename T> void free_ref( pref<T> *r ) {
-	if( !r->finalize ) return;
-	delete r->value;
-	r->value = NULL;
-	r->finalize = NULL;
-}
+		template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
+			pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
+			r->finalize = finalize;
+			r->value = value;
+			return r;
+		}
 
-template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
-	r->finalize = finalize;
-	r->value = value;
-	return r;
-}
+		template<typename T> pref<T> *_alloc_const( const T *value ) {
+			pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(r));
+			r->finalize = NULL;
+			r->value = (T*)value;
+			return r;
+		}
+		";
 
-template<typename T> pref<T> *_alloc_const( const T *value ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(r));
-	r->finalize = NULL;
-	r->value = (T*)value;
-	return r;
-}
-
-";
-
-	public static function generateCpp( opts : Options ) {
+	public static function generateCpp(opts : Options) {
 		var file = opts.idlFile;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
@@ -99,10 +88,19 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		add(StringTools.trim(gc ? HEADER_GC : HEADER_NO_GC));
 		add("");
 		add("#endif");
-		if( opts.includeCode != null ) {
+
+		/* Handle Includes TODO@Wolfie -> Dedup? **/
+		for(sFile in opts.sourceFiles){
 			add("");
-			add(StringTools.trim(opts.includeCode));
+			for(l in sys.io.File.getBytes(if(sys.FileSystem.exists(opts.out+ "/" + sFile)){
+				opts.out + "/" + sFile;
+			} else { sFile; }).toString().split("\n")){
+				if(StringTools.startsWith(l, "#include")){
+					add(StringTools.trim(l));
+				}
+			}
 		}
+
 		add("");
 		add('extern "C" {');
 		add("");
@@ -381,7 +379,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		add("}"); // extern C
 
-		sys.io.File.saveContent(opts.nativeLib+".cpp", output.toString());
+		sys.io.File.saveContent(opts.out + "/" + opts.nativeLib+".cpp", output.toString());
 	}
 
 	static function command( cmd, args : Array<String> ) {
@@ -390,7 +388,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
 
-	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
+	public static function generateJs(opts : Options, ?params : Array<String>) {
+		var sources = opts.sourceFiles;
+
 		if( params == null )
 			params = [];
 
@@ -399,7 +399,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			if( p.substr(0, 2) == "-O" )
 				hasOpt = true;
 		if( !hasOpt )
-			params.push("-O2");
+			params.push("-O0");
 
 		var lib = opts.nativeLib;
 
@@ -412,18 +412,25 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		var outFiles = [];
 		sources.push(lib+".cpp");
 		for( cfile in sources ) {
-			var out = cfile.substr(0, -4) + ".bc";
-			var args = params.concat(["-c", cfile, "-o", out]);
+			var sourcePath = if(sys.FileSystem.exists(opts.out+ "/" + cfile)){
+				opts.out + "/" + cfile;
+			} else { cfile; }
+
+			var out = opts.out + "/" + cfile.substr(0, -4) + ".bc";
+			var args = params.concat(["-c", sourcePath, "-o", out, "-I" + Sys.getCwd()]);
 			command( emcc, args);
 			outFiles.push(out);
 		}
 
 		// link : because too many files, generate Makefile
 		var tmp = "Makefile.tmp";
+		var libPath = opts.out + "/" + lib;
+
 		var args = params.concat([
-			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
+			//"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1", "-O0", "-s", "USE_WEBGL2=1", "-s", "FULL_ES3=1", "-s", "NO_EXIT_RUNTIME=1",
+			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1", "-O0", "-s", "NO_EXIT_RUNTIME=1",
 			"--memory-init-file", "0",
-			"-o", '$lib.js'
+			"-o", '$libPath.js'
 		]);
 		var output = "SOURCES = " + outFiles.join(" ") + "\n";
 		output += "all:\n";
@@ -431,7 +438,6 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		sys.io.File.saveContent(tmp, output);
 		command("make", ["-f", tmp]);
 		sys.FileSystem.deleteFile(tmp);
+		sys.io.File.copy("index.html", opts.out+"/index.html");
 	}
-
-
 }
