@@ -50,7 +50,7 @@ template <typename T> struct pref {
 #define HL_CONST
 
 template<typename T> void free_ref( pref<T> *r ) {
-	if( !r->finalize ) return;
+	if( !r->finalize ) hl_error(\"delete() is not allowed on const value.\");
 	delete r->value;
 	r->value = NULL;
 	r->finalize = NULL;
@@ -80,9 +80,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 	}
 
 	public static function generateCpp( opts : Options ) {
-		
+
 		initOpts(opts);
-		
+
 		var file = opts.idlFile;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
@@ -262,7 +262,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 										case TCustom(id): id;
 										default: throw "assert";
 										}
-										output.add('alloc_ref(new ${typeNames.get(refRet).constructor}(');
+										if( a == ARef && tret.attr.indexOf(AConst) >= 0 )
+											output.add('alloc_ref_const(&('); // we shouldn't call delete() on this one !
+										else
+											output.add('alloc_ref(new ${typeNames.get(refRet).constructor}(');
 									default:
 									}
 								}
@@ -403,7 +406,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
 		if( params == null )
 			params = [];
-		
+
 		initOpts(opts);
 
 		var hasOpt = false;
