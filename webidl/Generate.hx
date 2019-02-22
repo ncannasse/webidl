@@ -72,7 +72,17 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 ";
 
+	static function initOpts( opts : Options ) {
+		if( opts.outputDir == null )
+			opts.outputDir = "";
+		else if( !StringTools.endsWith(opts.outputDir,"/") )
+			opts.outputDir += "/";
+	}
+
 	public static function generateCpp( opts : Options ) {
+		
+		initOpts(opts);
+		
 		var file = opts.idlFile;
 		var content = sys.io.File.getBytes(file);
 		var parse = new webidl.Parser();
@@ -381,7 +391,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		add("}"); // extern C
 
-		sys.io.File.saveContent(opts.nativeLib+".cpp", output.toString());
+		sys.io.File.saveContent(opts.outputDir + opts.nativeLib+".cpp", output.toString());
 	}
 
 	static function command( cmd, args : Array<String> ) {
@@ -393,6 +403,8 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
 		if( params == null )
 			params = [];
+		
+		initOpts(opts);
 
 		var hasOpt = false;
 		for( p in params )
@@ -412,14 +424,14 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		var outFiles = [];
 		sources.push(lib+".cpp");
 		for( cfile in sources ) {
-			var out = cfile.substr(0, -4) + ".bc";
+			var out = opts.outputDir + cfile.substr(0, -4) + ".bc";
 			var args = params.concat(["-c", cfile, "-o", out]);
 			command( emcc, args);
 			outFiles.push(out);
 		}
 
 		// link : because too many files, generate Makefile
-		var tmp = "Makefile.tmp";
+		var tmp = opts.outputDir + "Makefile.tmp";
 		var args = params.concat([
 			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
 			"--memory-init-file", "0",
