@@ -1,0 +1,3 @@
+-hl sample.hl
+-lib webidl
+-main Sample
