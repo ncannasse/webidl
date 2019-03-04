@@ -124,7 +124,7 @@ class Module {
 					if( f.name == name )
 						switch( f.kind ) {
 						case FMethod(args, ret):
-							fl.push({args:args, ret:ret});
+							fl.push({args:args, ret:ret,pos:f.pos});
 						default:
 						}
 				return fl;
@@ -151,6 +151,9 @@ class Module {
 						// create dispatching code
 						var maxArgs = 0;
 						for( v in vars ) if( v.args.length > maxArgs ) maxArgs = v.args.length;
+
+						if( vars.length > 1 && maxArgs == 0 )
+							Context.error("Duplicate method declaration", makePosition(vars.pop().pos));
 
 						var targs : Array<FunctionArg> = [];
 						var argsTypes = [];
