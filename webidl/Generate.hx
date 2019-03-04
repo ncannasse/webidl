@@ -57,14 +57,14 @@ template<typename T> void free_ref( pref<T> *r ) {
 }
 
 template<typename T> pref<T> *_alloc_ref( T *value, void (*finalize)( pref<T> * ) ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(r));
+	pref<T> *r = (pref<T>*)hl_gc_alloc_finalizer(sizeof(pref<T>));
 	r->finalize = finalize;
 	r->value = value;
 	return r;
 }
 
 template<typename T> pref<T> *_alloc_const( const T *value ) {
-	pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(r));
+	pref<T> *r = (pref<T>*)hl_gc_alloc_noptr(sizeof(pref<T>));
 	r->finalize = NULL;
 	r->value = (T*)value;
 	return r;
