@@ -4,6 +4,15 @@ This library allows to access any C++ library from Haxe/JS (using Emscripten or 
 
 For a complete example, see the [sample](https://github.com/ncannasse/webidl/tree/master/sample)
 
+## Installing
+
+```bash
+git clone https://github.com/ncannasse/webidl.git # Clone the repo
+haxelib dev webidl webidl # Set the webidl package install directory to the cloned repo
+```
+
+## Usage
+
 Given the following IDL file describing a C++ library:
 
 ```java
