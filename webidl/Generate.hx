@@ -428,7 +428,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			if (emSdk == null) {
 				throw "Missing EMSCRIPTEN environment variable. Install emscripten";
 			}
-			emSdk += "upstream/emscripten";
+			emSdk += "/upstream/emscripten";
 		}
 		var emcc = emSdk + "/emcc";
 
