@@ -403,6 +403,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
 
+	static function createDirectories(pathToFile) {
+		sys.FileSystem.createDirectory(haxe.io.Path.directory(pathToFile));
+	}
+
 	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
 		if( params == null )
 			params = [];
@@ -419,15 +423,21 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		var lib = opts.nativeLib;
 
 		var emSdk = Sys.getEnv("EMSCRIPTEN");
-		if( emSdk == null )
-			throw "Missing EMSCRIPTEN environment variable. Install emscripten";
+		if( emSdk == null ) {
+			emSdk = Sys.getEnv("EMSDK");
+			if (emSdk == null) {
+				throw "Missing EMSCRIPTEN environment variable. Install emscripten";
+			}
+			emSdk += "upstream/emscripten";
+		}
 		var emcc = emSdk + "/emcc";
 
 		// build sources BC files
 		var outFiles = [];
-		sources.push(lib+".cpp");
+		//sources.push(lib+".cpp");
 		for( cfile in sources ) {
 			var out = opts.outputDir + cfile.substr(0, -4) + ".bc";
+			createDirectories(out);
 			var args = params.concat(["-c", cfile, "-o", out]);
 			command( emcc, args);
 			outFiles.push(out);
