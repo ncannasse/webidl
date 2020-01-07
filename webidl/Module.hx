@@ -433,14 +433,14 @@ class Module {
 			});
 
 		// For HL no initialization is required so execute the callback immediately
-		} else if (Context.defined("hl")) {
+		} else {
 			types.push(macro class Init {
 				public static function init(onReady:Void->Void) {
 					onReady();
 				}
 			});
 		}
-
+		
 		Context.defineModule(module, types);
 		Context.registerModuleDependency(module, file);
 

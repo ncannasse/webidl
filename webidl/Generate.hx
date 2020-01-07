@@ -403,6 +403,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		if( ret != 0 ) throw "Command '" + cmd + "' has exit with error code " + ret;
 	}
 
+	static function createDirectories(pathToFile) {
+		sys.FileSystem.createDirectory(haxe.io.Path.directory(pathToFile));
+	}
+
 	public static function generateJs( opts : Options, sources : Array<String>, ?params : Array<String> ) {
 		if( params == null )
 			params = [];
@@ -419,32 +423,43 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 		var lib = opts.nativeLib;
 
 		var emSdk = Sys.getEnv("EMSCRIPTEN");
-		if( emSdk == null )
-			throw "Missing EMSCRIPTEN environment variable. Install emscripten";
+		if( emSdk == null ) {
+			emSdk = Sys.getEnv("EMSDK");
+			if (emSdk == null) {
+				throw "Missing EMSCRIPTEN and EMSDK environment variable. Install emscripten";
+			}
+
+			emSdk += "/upstream/emscripten";
+		}
+
+		emSdk = StringTools.replace(emSdk, "\\", "/");
+
 		var emcc = emSdk + "/emcc";
 
 		// build sources BC files
 		var outFiles = [];
-		sources.push(lib+".cpp");
+		//sources.push(lib+".cpp");
 		for( cfile in sources ) {
 			var out = opts.outputDir + cfile.substr(0, -4) + ".bc";
+			createDirectories(out);
 			var args = params.concat(["-c", cfile, "-o", out]);
 			command( emcc, args);
 			outFiles.push(out);
 		}
 
-		// link : because too many files, generate Makefile
-		var tmp = opts.outputDir + "Makefile.tmp";
+		// link : because too many files, create source file.
+		var tmp = opts.outputDir + "Sources.tmp";
 		var args = params.concat([
-			"-s", 'EXPORT_NAME="\'$lib\'"', "-s", "MODULARIZE=1",
+			'@$tmp',
+			"-s", 'EXPORT_NAME="$lib"', "-s", "MODULARIZE=1",
 			"--memory-init-file", "0",
 			"-o", '$lib.js'
 		]);
-		var output = "SOURCES = " + outFiles.join(" ") + "\n";
-		output += "all:\n";
-		output += "\t"+emcc+" $(SOURCES) " + args.join(" ");
-		sys.io.File.saveContent(tmp, output);
-		command("make", ["-f", tmp]);
+		var sourcesOutput = outFiles.join(" ") + "\n";
+		sys.io.File.saveContent(tmp, sourcesOutput);
+
+		command(emcc, args);
+
 		sys.FileSystem.deleteFile(tmp);
 	}
 
