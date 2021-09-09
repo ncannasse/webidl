@@ -22,10 +22,11 @@ class Module {
 	function makeName( name : String ) {
 		// name - list of comma separated prefixes
 		if( opts.chopPrefix != null ) {
-			// split the string
 			var prefixes = opts.chopPrefix.split(',');
-			for(prefix in prefixes) {
-				StringTools.startsWith(name, prefix) ) name = name.substr(prefix.length);
+			for (prefix in prefixes) {
+				if (StringTools.startsWith(name, prefix)) {
+					name = name.substr(prefix.length);
+				}
 			}
 		}
 		return capitalize(name);
