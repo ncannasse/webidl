@@ -20,7 +20,15 @@ class Module {
 	}
 
 	function makeName( name : String ) {
-		if( opts.chopPrefix != null && StringTools.startsWith(name, opts.chopPrefix) ) name = name.substr(opts.chopPrefix.length);
+		// name - list of comma separated prefixes
+		if( opts.chopPrefix != null ) {
+			var prefixes = opts.chopPrefix.split(',');
+			for (prefix in prefixes) {
+				if (StringTools.startsWith(name, prefix)) {
+					name = name.substr(prefix.length);
+				}
+			}
+		}
 		return capitalize(name);
 	}
 
