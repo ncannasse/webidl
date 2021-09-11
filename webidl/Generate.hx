@@ -39,7 +39,7 @@ class Generate {
 	static var HEADER_GC = "
 
 template <typename T> struct pref {
-	void *finalize;
+	void (*finalize)( pref<T> * );
 	T *value;
 };
 
