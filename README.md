@@ -2,12 +2,12 @@
 
 This library allows to access any C++ library from Haxe/JS (using Emscripten or Web Assembly) and Haxe/HashLink by simply defining an idl file.
 
-For a complete example, see the [sample](https://github.com/ncannasse/webidl/tree/master/sample)
+For a complete example, see the [sample](https://github.com/onehundredfeet/webidl/tree/master/sample)
 
 ## Installing
 
 ```bash
-git clone https://github.com/ncannasse/webidl.git # Clone the repo
+git clone https://github.com/onehundredfeet/webidl.git # Clone the repo
 haxelib dev webidl webidl # Set the webidl package install directory to the cloned repo
 ```
 
