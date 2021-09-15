@@ -1,4 +1,5 @@
 package webidl;
+import haxe.macro.Expr.Function;
 import webidl.Data;
 
 class Generate {
@@ -175,7 +176,17 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "void*";
 			case TArray(t): makeType(t) + "[]";
 			case TBool: "bool";
-			case TCustom(id): typeNames.get(id).full;
+			case TByteString: "char *";
+			case TCustom(id): {
+				var t = typeNames.get(id);
+				if (t == null) {
+					throw "Unsupported type " + id;
+				} else {
+					typeNames.get(id).full;
+				}
+			}
+			default:
+				throw "Unknown type " + t;
 			}
 		}
 
@@ -189,6 +200,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "_BYTES";
 			case TArray(t): "_BYTES";
 			case TBool: "_BOOL";
+			case TByteString: "_BYTES";
 			case TCustom(name): enumNames.exists(name) ? "_I32" : "_IDL";
 			}
 		}
@@ -226,9 +238,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 					switch( f.kind ) {
 					case FMethod(margs, ret):
 						var isConstr = f.name == name;
-						var args = isConstr ? margs : [{ name : "_this", t : { t : TCustom(name), attr : [] }, opt : false }].concat(margs);
+						var args = (isConstr || ret.attr.indexOf(AStatic) >= 0) ? margs : [{ name : "_this", t : { t : TCustom(name), attr : [] }, opt : false }].concat(margs);
 						var tret = isConstr ? { t : TCustom(name), attr : [] } : ret;
 						var funName = name + "_" + (isConstr ? "new" + args.length : f.name + (args.length - 1));
+						//var staticPrefix = (attrs.indexOf(AStatic) >= 0) ? "static" : ""; ${staticPrefix}
 						output.add('HL_PRIM ${makeTypeDecl(tret)} HL_NAME($funName)(');
 						var first = true;
 						for( a in args ) {
@@ -294,11 +307,26 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								case "op_mulq":
 									output.add("*_unref(_this) *= (");
 								default:
-									output.add("_unref(_this)->" + f.name+"(");
+									var callName = f.name;
+
+									for(a in ret.attr) {
+										switch(a) {
+											case ACall(name): callName = name;
+											default:
+										}
+									}
+									
+									if (ret.attr.indexOf(AStatic) >= 0)
+										output.add( callName + "(");
+									else if( ret.attr.indexOf(ACObject) >= 0) 
+										output.add( callName + "( _unref(_this) " );
+									else 
+										output.add("_unref(_this)->" + callName+"(");
+									
 								}
 							}
 
-							var first = true;
+							var first = (ret.attr.indexOf(ACObject) >= 0 ? false : true);
 							for( a in margs ) {
 								if( first ) first = false else output.add(", ");
 								for( a in a.t.attr ) {

@@ -59,6 +59,7 @@ class Parser {
 	function parseDecl() {
 		var attr = attributes();
 		var pmin = this.pos;
+		
 		switch( token() ) {
 		case TId("interface"):
 			var name = ident();
@@ -91,8 +92,13 @@ class Parser {
 			ensure(TSemicolon);
 			return { pos : makePos(pmin), kind : DEnum(name, values) };
 		case TId(name):
-			if( attr.length > 0 )
-				throw "assert";
+			if (attr == null) {
+				throw "attributes error on " + name;
+			}
+			if( attr.length > 0 ) {
+				trace (name + " : " + attributes);
+				throw "attributes should be zero on " + name;
+			}
 			ensure(TId("implements"));
 			var intf = ident();
 			ensure(TSemicolon);
@@ -113,6 +119,12 @@ class Parser {
 			case "Ref": ARef;
 			case "Const": AConst;
 			case "NoDelete": ANoDelete;
+			case "Static" : AStatic; 
+			case "CObject" : ACObject;
+			case "Call" : 
+				trace("Call!");
+				ensure(TOp("="));
+				ACall(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
 			case "Prefix":
 				ensure(TOp("="));
 				APrefix(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
@@ -130,6 +142,7 @@ class Parser {
 			if( !maybe(TComma) ) break;
 		}
 		ensure(TBkClose);
+
 		return attrs;
 	}
 
@@ -144,6 +157,7 @@ class Parser {
 		case "boolean", "bool": TBool;
 		case "any": TAny;
 		case "VoidPtr": TVoidPtr;
+		case "ByteString" : TByteString;
 		default: TCustom(id);
 		};
 		if( maybe(TBkOpen) ) {
