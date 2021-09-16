@@ -43,7 +43,7 @@ enum Type {
 	TBool;
 	TAny;
 	TVoidPtr;
-	TByteString;
+	THString;
 	TCustom( id : String );
 	TArray( t : Type );
 }
@@ -57,6 +57,8 @@ enum Attrib {
 	// interfaces
 	ANoDelete;
 	AStatic;
+	AThrow(msg :String);
+	AValidate(expression : String);
 	ACObject;
 	ACall(name:String);
 	APrefix( prefix : String );

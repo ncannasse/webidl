@@ -152,6 +152,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				add('HL_PRIM void HL_NAME(${name}_delete)( $fullName _this ) {\n\tfree_ref(_this);\n}');
 				add('DEFINE_PRIM(_VOID, ${name}_delete, _IDL);');
 			case DEnum(name, values):
+				trace("Enum " + name);
 				enumNames.set(name, true);
 				typeNames.set(name, { full : "int", constructor : null });
 				add('static $name ${name}__values[] = { ${values.join(",")} };');
@@ -176,7 +177,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "void*";
 			case TArray(t): makeType(t) + "[]";
 			case TBool: "bool";
-			case TByteString: "char *";
+			case THString: "uchar *";
 			case TCustom(id): {
 				var t = typeNames.get(id);
 				if (t == null) {
@@ -200,7 +201,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "_BYTES";
 			case TArray(t): "_BYTES";
 			case TBool: "_BOOL";
-			case TByteString: "_BYTES";
+			case THString: "_BYTES";
 			case TCustom(name): enumNames.exists(name) ? "_I32" : "_IDL";
 			}
 		}
@@ -261,13 +262,37 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 
 						function addCall(margs : Array<{ name : String, opt : Bool, t : TypeAttr }> ) {
+
+							// preamble
+							var preamble = false;
+							for( a in margs ) {
+								switch( a.t.t ) {
+									case THString:
+										preamble = true;
+										output.add("auto " + a.name + "__cstr = hl_to_utf8( " + a.name + " );\n\t");
+									default:
+									}
+							}
+
+							for (a in tret.attr) {
+								switch(a) {
+									case AValidate(expr):
+										preamble = true;
+									default:
+								}
+							}
+
 							var refRet = null;
 							var enumName = getEnumName(tret.t);
 							if( isConstr ) {
 								refRet = name;
-								output.add('return alloc_ref((new ${typeNames.get(refRet).constructor}(');
+								if (preamble) {
+									output.add('auto ___retvalue = alloc_ref((new ${typeNames.get(refRet).constructor}(');
+								} else {
+									output.add('return alloc_ref((new ${typeNames.get(refRet).constructor}(');
+								}
 							} else {
-								if( tret.t != TVoid ) output.add("return ");
+								if( tret.t != TVoid ) if (preamble) output.add("auto ___retvalue = "); else output.add("return "); 
 								for( a in ret.attr ) {
 									switch( a ) {
 									case ARef, AValue:
@@ -282,8 +307,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 									default:
 									}
 								}
-								if( enumName != null )
+								if( enumName != null ) {
 									output.add('make__$enumName(');
+									throw "Enum returns mot supported ";
+								}
 								else if( refRet == null && ret.t.match(TCustom(_)) ) {
 									refRet = switch(tret.t) {
 									case TCustom(id): id;
@@ -341,6 +368,8 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								else switch( a.t.t ) {
 								case TCustom(_):
 									output.add('_unref(${a.name})');
+								case THString:
+									output.add(a.name + "__cstr");
 								default:
 									if( isDyn(a) ) {
 										output.add("_GET_OPT("+a.name+","+dynamicAccess(a.t.t)+")");
@@ -352,7 +381,38 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 							if( enumName != null ) output.add(')');
 							if( refRet != null ) output.add(')),$refRet');
 							add(");");
-						}
+
+							// post amble
+							if (preamble) {
+								for( a in margs ) {
+									switch( a.t.t ) {
+										case THString:
+											output.add("\tfree(" + a.name + "__cstr);\n");
+										default:
+										}
+								}
+
+							// Check for throw
+							for(b in ret.attr) {
+								switch(b) {
+									case AValidate(expr): 
+										for(a in ret.attr) {
+											switch(a) {
+												case AThrow(msg): 
+													output.add("if (___retvalue != " + expr + ") hl_throw(" + msg + ");");
+												default:
+											}
+										}
+									default:
+								}
+							}
+
+							add("\treturn ___retvalue;");
+
+							} 
+
+						} // end add call
+
 
 						var hasOpt = false;
 						for( i in 0...margs.length )

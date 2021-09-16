@@ -46,7 +46,7 @@ class Module {
 		case TFloat: hl ? macro : Single : macro : Float;
 		case TDouble: macro : Float;
 		case TBool: macro : Bool;
-		case TByteString : macro : String;
+		case THString : macro : String;
 		case TAny: macro : webidl.Types.Any;
 		case TArray(t):
 			var tt = makeType({ t : t, attr : [] });

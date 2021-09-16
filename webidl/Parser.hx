@@ -121,8 +121,13 @@ class Parser {
 			case "NoDelete": ANoDelete;
 			case "Static" : AStatic; 
 			case "CObject" : ACObject;
+			case "Throw" : 
+				ensure(TOp("="));
+				AThrow(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
+			case "Validate" : 
+				ensure(TOp("="));
+				AValidate(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
 			case "Call" : 
-				trace("Call!");
 				ensure(TOp("="));
 				ACall(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
 			case "Prefix":
@@ -157,7 +162,7 @@ class Parser {
 		case "boolean", "bool": TBool;
 		case "any": TAny;
 		case "VoidPtr": TVoidPtr;
-		case "ByteString" : TByteString;
+		case "String" : THString;
 		default: TCustom(id);
 		};
 		if( maybe(TBkOpen) ) {
