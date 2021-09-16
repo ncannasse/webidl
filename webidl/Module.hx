@@ -4,6 +4,7 @@ package webidl;
 import webidl.Data;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import tink.MacroApi;
 
 class Module {
 	var p : Position;
@@ -103,8 +104,10 @@ class Module {
 		if( !hl ) access.push(AInline);
 		if( pub ) access.push(APublic);
 		if( isConstr ) access.push(AStatic);
+		if (ret.attr.contains(AStatic)) access.push(AStatic);
 
-		return {
+		var x =
+		 {
 			pos : makePosition(f.pos),
 			name : pub ? name : name + args.length,
 			meta : [makeNative(iname+"_" + name + (name == "delete" ? "" : ""+args.length))],
@@ -115,6 +118,9 @@ class Module {
 				args : [for( a in args ) { name : a.name, opt : a.opt, type : makeType(a.t) }],
 			}),
 		};
+
+		
+		return x;
 	}
 
 	function buildDecl( d : Definition ) {
@@ -143,7 +149,6 @@ class Module {
 			for( f in fields ) {
 				switch( f.kind ) {
 				case FMethod(_):
-
 					var vars = getVariants(f.name);
 					if( vars == null ) continue;
 
@@ -153,10 +158,7 @@ class Module {
 
 						var f = makeNativeField(iname, f, vars[0].args, vars[0].ret, true);
 						dfields.push(f);
-
-
-					} else {
-
+					} else { 
 						// create dispatching code
 						var maxArgs = 0;
 						for( v in vars ) if( v.args.length > maxArgs ) maxArgs = v.args.length;
@@ -433,6 +435,7 @@ class Module {
 		var types = buildTypes(opts, Context.defined("hl"));
 		if (types == null) return macro : Void;
 
+		
 		// Add an init function for initializing the JS module
 		if (Context.defined("js")) {
 			types.push(macro class Init {

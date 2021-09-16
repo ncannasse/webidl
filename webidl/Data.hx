@@ -60,7 +60,7 @@ enum Attrib {
 	AThrow(msg :String);
 	AValidate(expression : String);
 	ACObject;
-	ACall(name:String);
+	AInternal(name:String);
 	APrefix( prefix : String );
 	AJSImplementation( name : String );	
 }

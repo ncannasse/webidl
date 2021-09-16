@@ -127,9 +127,9 @@ class Parser {
 			case "Validate" : 
 				ensure(TOp("="));
 				AValidate(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
-			case "Call" : 
+			case "Internal" : 
 				ensure(TOp("="));
-				ACall(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
+				AInternal(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });
 			case "Prefix":
 				ensure(TOp("="));
 				APrefix(switch( token() ) { case TString(s): s; case var tk: unexpected(tk); });

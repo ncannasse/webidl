@@ -139,20 +139,22 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			switch( d.kind ) {
 			case DInterface(name, attrs, _):
 				var prefix = "";
+				var intName = name;
 				for( a in attrs )
 					switch( a ) {
 					case APrefix(name): prefix = name;
+					case AInternal(iname): intName = iname;
 					default:
 					}
-				var fullName = "_ref(" + prefix + name+")*";
-				typeNames.set(name, { full : fullName, constructor : prefix + name });
+				
+				var fullName = "_ref(" + prefix + intName +")*";
+				typeNames.set(name, { full : fullName, constructor : prefix + intName });
 				if( attrs.indexOf(ANoDelete) >= 0 )
 					continue;
 				add('static void finalize_$name( $fullName _this ) { free_ref(_this); }');
 				add('HL_PRIM void HL_NAME(${name}_delete)( $fullName _this ) {\n\tfree_ref(_this);\n}');
 				add('DEFINE_PRIM(_VOID, ${name}_delete, _IDL);');
 			case DEnum(name, values):
-				trace("Enum " + name);
 				enumNames.set(name, true);
 				typeNames.set(name, { full : "int", constructor : null });
 				add('static $name ${name}__values[] = { ${values.join(",")} };');
@@ -177,7 +179,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "void*";
 			case TArray(t): makeType(t) + "[]";
 			case TBool: "bool";
-			case THString: "uchar *";
+			case THString: "vstring *";
 			case TCustom(id): {
 				var t = typeNames.get(id);
 				if (t == null) {
@@ -201,7 +203,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			case TAny, TVoidPtr: "_BYTES";
 			case TArray(t): "_BYTES";
 			case TBool: "_BOOL";
-			case THString: "_BYTES";
+			case THString: "_STRING";
 			case TCustom(name): enumNames.exists(name) ? "_I32" : "_IDL";
 			}
 		}
@@ -269,7 +271,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								switch( a.t.t ) {
 									case THString:
 										preamble = true;
-										output.add("auto " + a.name + "__cstr = hl_to_utf8( " + a.name + " );\n\t");
+										output.add("auto " + a.name + "__cstr = hl_to_utf8( " + a.name + "->bytes ); // Should be garbage collected\n\t");
 									default:
 									}
 							}
@@ -338,7 +340,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 									for(a in ret.attr) {
 										switch(a) {
-											case ACall(name): callName = name;
+											case AInternal(name): callName = name;
 											default:
 										}
 									}
@@ -387,7 +389,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								for( a in margs ) {
 									switch( a.t.t ) {
 										case THString:
-											output.add("\tfree(" + a.name + "__cstr);\n");
+											//output.add("\tfree(" + a.name + "__cstr);\n");
 										default:
 										}
 								}
