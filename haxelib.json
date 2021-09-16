@@ -1,0 +1,10 @@
+{
+	"name" : "hl-idl",
+	"url" : "https://github.com/onehundredfeet/hl-idl",
+	"license" : "MIT",
+	"contributors" : ["ncannasse","onehundredfeet"],
+	"description" : "C/C++ Interface Definition Language support for Haxe HL/JS.",
+	"version" : "1.0.0",
+	"releasenote" : "",
+	"dependencies": {}
+}
