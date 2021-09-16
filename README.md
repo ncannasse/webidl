@@ -1,4 +1,4 @@
-# Haxe WebIDL
+# Hashlink IDL
 
 This library allows to access any C++ library from Haxe/JS (using Emscripten or Web Assembly) and Haxe/HashLink by simply defining an idl file.
 
