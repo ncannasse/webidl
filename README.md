@@ -1,15 +1,15 @@
-# Haxe HL IDL
+# Hashlink & Haxe/JS IDL
 
 This library allows to access any C++ library from Haxe/JS (using Emscripten or Web Assembly) and Haxe/HashLink by simply defining an idl file.
 
-Hashlink is the primary target.  JS support may lag a bit behind.
+Hashlink is currently the primary platform.  Haxe/JS may lag a little bit behind.
 
-For a complete example, see the [sample](https://github.com/onehundredfeet/webidl/tree/master/sample)
+For a complete example, see the [sample](https://github.com/onehundredfeet/hl-idl/tree/master/sample)
 
 ## Installing
 
 ```bash
-git clone https://github.com/onehundredfeet/webidl.git # Clone the repo
+git clone https://github.com/onehundredfeet/hl-idl.git # Clone the repo
 haxelib dev webidl webidl # Set the webidl package install directory to the cloned repo
 ```
 
@@ -72,4 +72,5 @@ Sample.main();
 ```
 
 Haxe webidl can be used for both Haxe/JS and Haxe/HashLink, the cpp bindings generated are the same for both platforms.
+
 
