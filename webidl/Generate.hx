@@ -271,7 +271,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								switch( a.t.t ) {
 									case THString:
 										preamble = true;
-										output.add("auto " + a.name + "__cstr = hl_to_utf8( " + a.name + "->bytes ); // Should be garbage collected\n\t");
+										output.add("auto " + a.name + "__cstr = ("+  a.name + " == nullptr) ? nullptr : hl_to_utf8( " + a.name + "->bytes ); // Should be garbage collected\n\t");
 									default:
 									}
 							}
