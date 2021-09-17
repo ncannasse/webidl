@@ -88,4 +88,21 @@ interface Session {
 
 This will allow you to simply use 'Session' while the translator knows that the class is HAPI_Session for the C/C++ integration.
 
+### \[CObject\]
+This tag on a function will tell the translator that the object is passed 'c' style instead of c++ style.
 
+interface MyClass {
+    void func();
+}
+
+```c++
+//C++ style
+obj->func();
+```
+
+```c
+//C Style - [CObject]
+func(obj);
+```
+
+This will automatically add a pointer of the class type as the first argument
