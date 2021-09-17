@@ -115,7 +115,9 @@ class Module {
 			kind : FFun({
 				ret : makeType(ret),
 				expr : expr,
-				args : [for( a in args ) { name : a.name, opt : a.opt, type : makeType(a.t) }],
+				args : [for( a in args ) {
+					if (a.t.attr.contains(AReturn)) {continue;}
+					{ name : a.name, opt : a.opt, type : makeType(a.t) }}],
 			}),
 		};
 

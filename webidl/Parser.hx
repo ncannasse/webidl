@@ -120,6 +120,7 @@ class Parser {
 			case "Const": AConst;
 			case "NoDelete": ANoDelete;
 			case "Static" : AStatic; 
+			case "Return" : AReturn;
 			case "CObject" : ACObject;
 			case "Throw" : 
 				ensure(TOp("="));
