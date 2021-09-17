@@ -74,3 +74,18 @@ Sample.main();
 Haxe webidl can be used for both Haxe/JS and Haxe/HashLink, the cpp bindings generated are the same for both platforms.
 
 
+## Extensions
+To make writing a broader range of adapters into more usable Haxe, we have added several constructs that extend the webidl spec. Most of these take the form of attributes.  Attributes are specified with a [] around a keyword.
+
+### \[Internal=NAME\]
+This allows you to override the name used to pass to the C functions.  It allows you to clean up the name of things for Haxe.
+
+```
+[Internal="HAPI_Session"]
+interface Session {
+
+```
+
+This will allow you to simply use 'Session' while the translator knows that the class is HAPI_Session for the C/C++ integration.
+
+
