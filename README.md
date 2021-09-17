@@ -100,7 +100,7 @@ interface MyClass {
     void func();
 }
 
-//C++ style
+//Generated call - C++ style
 obj->func();
 ```
 
@@ -109,11 +109,44 @@ obj->func();
 
 ```c
 interface MyClass {
-    \[CObject\] void func();
+    [CObject] void func();
 }
 
-//C Style - [CObject]
+//Generated call - C Style - [CObject]
 func(obj);
 ```
 
 This will automatically add a pointer of the class type as the first argument
+
+
+### Validate & Throw
+\[Validate="Value"\]
+
+This will check to see if the return value of the function equals the value specified.  If so, another action is taken.  Right now, the only action supported is 'Throw'
+
+\[Throw="expression"\]
+This will be thrown as is if the validation check is failed
+```
+interface MyClass {
+[Validate="0", Throw="\"Result is non-zero\""] int func();
+}
+```
+
+### Return
+This is a tricky one.  It's intended to simplify C-style out value passing by reference.
+
+Instead of specifying a pointer to a value that is to be set by the function, you can bypass the typical return and return this value instead.  It is used for scenarios where the return value is intended to return an error code. 
+
+This is often used in conjunction with Validate & Throw
+
+```
+interface MyClass {
+int func([Return] int outCount);
+}
+
+```
+
+```haxe
+var x = new MyClass();
+var y = x.func(); // Now returns directly instead of being passed by reference.  
+```
