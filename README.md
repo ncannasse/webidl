@@ -91,16 +91,27 @@ This will allow you to simply use 'Session' while the translator knows that the 
 ### \[CObject\]
 This tag on a function will tell the translator that the object is passed 'c' style instead of c++ style.
 
+
+}
+
+```c++
+
 interface MyClass {
     void func();
 }
 
-```c++
 //C++ style
 obj->func();
 ```
 
+
+
+
 ```c
+interface MyClass {
+    \[CObject\] void func();
+}
+
 //C Style - [CObject]
 func(obj);
 ```
