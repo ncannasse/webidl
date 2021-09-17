@@ -62,6 +62,8 @@ enum Attrib {
 	AValidate(expression : String);
 	ACObject;
 	AInternal(name:String);
+	AGet(name:String);
+	ASet(name:String);
 	APrefix( prefix : String );
 	AJSImplementation( name : String );	
 }

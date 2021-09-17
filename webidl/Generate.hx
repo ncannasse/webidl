@@ -168,7 +168,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			}
 		}
 
-		function makeType(t:webidl.Data.Type) {
+		function makeType(t:webidl.Data.Type,  isReturn : Bool= false) {
 			return switch (t) {
 				case TFloat: "float";
 				case TDouble: "double";
@@ -178,7 +178,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				case TAny, TVoidPtr: "void*";
 				case TArray(t): makeType(t) + "[]";
 				case TBool: "bool";
-				case THString: "vstring *";
+				case THString: (isReturn) ? "vdynamic *" : "vstring *";
 				case TCustom(id): {
 						var t = typeNames.get(id);
 						if (t == null) {
@@ -192,7 +192,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			}
 		}
 
-		function defType(t) {
+		function defType(t, isReturn : Bool = false) {
 			return switch (t) {
 				case TFloat: "_F32";
 				case TDouble: "_F64";
@@ -202,7 +202,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				case TAny, TVoidPtr: "_BYTES";
 				case TArray(t): "_BYTES";
 				case TBool: "_BOOL";
-				case THString: "_STRING";
+				case THString: (isReturn) ? "_DYN" : "_STRING";
 				case TCustom(name): enumNames.exists(name) ? "_I32" : "_IDL";
 			}
 		}
@@ -218,7 +218,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 			}
 		}
 
-		function makeTypeDecl(td:TypeAttr) {
+		function makeTypeDecl(td:TypeAttr, isReturn : Bool = false) {
 			var prefix = "";
 			for (a in td.attr) {
 				switch (a) {
@@ -227,7 +227,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 					default:
 				}
 			}
-			return prefix + makeType(td.t);
+			return prefix + makeType(td.t, isReturn);
 		}
 
 		function isDyn(arg:{opt:Bool, t:TypeAttr}) {
@@ -263,7 +263,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								
 								var funName = name + "_" + (isConstr ? "new" + args.length : f.name + (args.length - 1));
 								// var staticPrefix = (attrs.indexOf(AStatic) >= 0) ? "static" : ""; ${staticPrefix}
-								output.add('HL_PRIM ${makeTypeDecl( returnField == null ? tret : {t: returnType, attr: []})} HL_NAME($funName)(');
+								output.add('HL_PRIM ${makeTypeDecl( returnField == null ? tret : {t: returnType, attr: []}, true)} HL_NAME($funName)(');
 								var first = true;
 
 								for (a in args) {
@@ -498,24 +498,43 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								if (enumName != null)
 									throw "TODO : enum attribute";
 
-								add('HL_PRIM ${makeTypeDecl(t)} HL_NAME(${name}_get_${f.name})( ${typeNames.get(name).full} _this ) {');
+								//Translate name
+								var internalName = f.name;
+								var getter : String = null;
+								var setter : String = null;
+								for (a in t.attr) {
+									switch (a) {
+										case AInternal(name): internalName = name;
+										case AGet(name): getter = name;
+										case ASet(name): setter = name;
+										default:
+									}
+								}
+								// Get
+								add('HL_PRIM ${makeTypeDecl(t, true)} HL_NAME(${name}_get_${f.name})( ${typeNames.get(name).full} _this ) {');
 								if (isVal) {
 									var fname = typeNames.get(tname).constructor;
 									add('\treturn alloc_ref(new $fname(_unref(_this)->${f.name}),$tname);');
 								} else if (isRef)
 									add('\treturn alloc_ref${isConst ? '_const' : ''}(_unref(_this)->${f.name},$tname);');
+								else if (getter != null) 
+									add('\treturn ${getter}(_unref(_this)->${internalName});');
 								else
-									add('\treturn _unref(_this)->${f.name};');
+									add('\treturn _unref(_this)->${internalName};');
 								add('}');
 
+								//Set
 								add('HL_PRIM ${makeTypeDecl(t)} HL_NAME(${name}_set_${f.name})( ${typeNames.get(name).full} _this, ${makeTypeDecl(t)} value ) {');
-								add('\t_unref(_this)->${f.name} = ${isVal ? "*" : ""}${isRef ? "_unref" : ""}(value);');
+								if (setter != null) 
+									add('\t_unref(_this)->${internalName} = ${setter}(${isVal ? "*" : ""}${isRef ? "_unref" : ""}(value));');
+								else
+									add('\t_unref(_this)->${internalName} = ${isVal ? "*" : ""}${isRef ? "_unref" : ""}(value);');
 								add('\treturn value;');
 								add('}');
 
-								var td = defType(t.t);
-								add('DEFINE_PRIM($td,${name}_get_${f.name},_IDL);');
-								add('DEFINE_PRIM($td,${name}_set_${f.name},_IDL $td);');
+								var td = defType(t.t, true);
+								add('DEFINE_PRIM(${defType(t.t, true)},${name}_get_${f.name},_IDL);');
+								add('DEFINE_PRIM(${defType(t.t)},${name}_set_${f.name},_IDL ${defType(t.t)});');
 								add('');
 							case DConst(_, _, _):
 						}
