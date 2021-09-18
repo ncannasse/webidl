@@ -80,6 +80,16 @@ To make writing a broader range of adapters into more usable Haxe, we have added
 ### Strings
 Strings are returned as Dynamics as hashlink seems to only support creation of Dynamics from string content. Strings are passed as vstring * which allows you to pass in a string type directly.
 
+### Enums
+Enums have an extension function that will return the integer value of the enum specified in C/C++.
+
+```haxe
+MyEnum.Value.ToInt();
+//or
+var x = MyEnum.Value;
+x.ToInt();
+```
+
 ### \[Internal=NAME\]
 This allows you to override the name used to pass to the C functions.  It allows you to clean up the name of things for Haxe.
 
