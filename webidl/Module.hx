@@ -49,9 +49,17 @@ class Module {
 		case TBool: macro : Bool;
 		case THString : macro : String;
 		case TAny: macro : webidl.Types.Any;
-		case TArray(t):
-			var tt = makeType({ t : t, attr : [] });
-			macro : webidl.Types.NativePtr<$tt>;
+		case TArray(at):
+			switch(at) {
+				case TInt: macro : hl.NativeArray<Int>;
+				case TFloat: macro : hl.NativeArray<Single>;
+				case TDouble: macro : hl.NativeArray<Float>;
+				case TBool: macro : hl.NativeArray<Bool>;
+				default:
+					throw "Unsupported array type. Sorry";
+			}
+//			var tt = makeType({ t : t, attr : [] });
+//			macro : webidl.Types.NativePtr<$tt>;
 		case TVoidPtr: macro : webidl.Types.VoidPtr;
 		case TCustom(id): TPath({ pack : [], name : makeName(id) });
 		}
@@ -87,8 +95,8 @@ class Module {
 		return Context.makePosition({ min : pos.pos, max : pos.pos + 1, file : pos.file });
 	}
 
-	function makeNativeField( iname : String, f : webidl.Data.Field, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
-		var name = f.name;
+	function makeNativeFieldRaw( iname : String, fname : String, pos : Position, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+		var name = fname;
 		var isConstr = name == iname;
 		if( isConstr ) {
 			name = "new";
@@ -108,7 +116,7 @@ class Module {
 
 		var x =
 		 {
-			pos : makePosition(f.pos),
+			pos : pos,
 			name : pub ? name : name + args.length,
 			meta : [makeNative(iname+"_" + name + (name == "delete" ? "" : ""+args.length))],
 			access : access,
@@ -123,6 +131,10 @@ class Module {
 
 		
 		return x;
+	}
+
+	function makeNativeField( iname : String, f : webidl.Data.Field, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+		return makeNativeFieldRaw(iname, f.name, makePosition(f.pos), args, ret, pub);
 	}
 
 	function buildDecl( d : Definition ) {
@@ -386,14 +398,23 @@ class Module {
 				Context.warning("Class " + name+" not found for implements " + intf, p);
 		case DEnum(name, values):
 			var index = 0;
-			types.push({
+			var cfields = [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(CInt(""+(index++))), pos : p }) }];
+
+			// Add Int Conversion
+			var ta : TypeAttr = { t : TInt, attr : [] };
+			var toInt = makeNativeFieldRaw( name, "ToInt", p, [], ta,true );
+			cfields.push(toInt);
+
+			var enumT = {
 				pos : p,
 				pack : pack,
 				name : makeName(name),
 				meta : [{ name : ":enum", pos : p }],
 				kind : TDAbstract(macro : Int),
-				fields : [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(CInt(""+(index++))), pos : p }) }],
-			});
+				fields : cfields,
+			};
+			types.push(enumT);
+
 		}
 	}
 

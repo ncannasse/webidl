@@ -157,6 +157,9 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 					enumNames.set(name, true);
 					typeNames.set(name, {full: "int", constructor: null});
 					add('static $name ${name}__values[] = { ${values.join(",")} };');
+
+					add('HL_PRIM int HL_NAME(${name}_ToInt0)( int idx ) {\n\treturn ${name}__values[idx];\n}');
+					add('DEFINE_PRIM(_I32, ${name}_ToInt0, _I32);');
 				case DImplements(_):
 			}
 		}
@@ -176,7 +179,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				case TInt: "int";
 				case TVoid: "void";
 				case TAny, TVoidPtr: "void*";
-				case TArray(t): makeType(t) + "[]";
+				case TArray(t): "varray*"; //makeType(t) + "vdynamic *";
 				case TBool: "bool";
 				case THString: (isReturn) ? "vdynamic *" : "vstring *";
 				case TCustom(id): {
@@ -200,7 +203,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 				case TInt: "_I32";
 				case TVoid: "_VOID";
 				case TAny, TVoidPtr: "_BYTES";
-				case TArray(t): "_BYTES";
+				case TArray(t): "_ARR";
 				case TBool: "_BOOL";
 				case THString: (isReturn) ? "_DYN" : "_STRING";
 				case TCustom(name): enumNames.exists(name) ? "_I32" : "_IDL";
