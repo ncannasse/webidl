@@ -264,7 +264,10 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 								
 								var tret = isConstr ? {t: TCustom(name), attr: []} : ret;
 								
-								var funName = name + "_" + (isConstr ? "new" + args.length : f.name + (args.length - 1));
+								// Static functions needs the exact number of arguments as function suffix. Otherwise C++ compilation will fail.
+								var argsSuffix = (ret.attr.indexOf(AStatic) >= 0) ? args.length : args.length - 1;
+								var funName = name + "_" + (isConstr ? "new" + args.length : f.name + argsSuffix);
+								
 								// var staticPrefix = (attrs.indexOf(AStatic) >= 0) ? "static" : ""; ${staticPrefix}
 								output.add('HL_PRIM ${makeTypeDecl( returnField == null ? tret : {t: returnType, attr: []}, true)} HL_NAME($funName)(');
 								var first = true;
