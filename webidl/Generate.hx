@@ -173,6 +173,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		function makeType(t:webidl.Data.Type,  isReturn : Bool= false) {
 			return switch (t) {
+				case TChar: "unsigned char";
 				case TFloat: "float";
 				case TDouble: "double";
 				case TShort: "short";
@@ -197,6 +198,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		function defType(t, isReturn : Bool = false) {
 			return switch (t) {
+				case TChar: "_I8";
 				case TFloat: "_F32";
 				case TDouble: "_F64";
 				case TShort: "_I16";
@@ -212,6 +214,7 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 
 		function dynamicAccess(t) {
 			return switch (t) {
+				case TChar: "c";
 				case TFloat: "f";
 				case TDouble: "d";
 				case TShort: "ui16";

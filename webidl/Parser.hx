@@ -189,6 +189,7 @@ class Parser {
 		var id = ident();
 		var t = switch (id) {
 			case "void": TVoid;
+			case "char": TChar;
 			case "float": TFloat;
 			case "double": TDouble;
 			case "long", "int": TInt; // long ensures 32 bits

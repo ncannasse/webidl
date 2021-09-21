@@ -36,6 +36,7 @@ typedef TypeAttr = { var t : Type; var attr : Array<Attrib>; };
 
 enum Type {
 	TVoid;
+	TChar;
 	TInt;
 	TShort;
 	TFloat;

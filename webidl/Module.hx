@@ -42,6 +42,7 @@ class Module {
 	function makeType( t : TypeAttr ) : ComplexType {
 		return switch( t.t ) {
 		case TVoid: macro : Void;
+		case TChar: macro : Int;
 		case TInt: macro : Int;
 		case TShort: hl ? macro : hl.UI16 : macro : Int;
 		case TFloat: hl ? macro : Single : macro : Float;
@@ -51,6 +52,7 @@ class Module {
 		case TAny: macro : webidl.Types.Any;
 		case TArray(at):
 			switch(at) {
+				case TChar: macro : hl.NativeArray<Int>;
 				case TInt: macro : hl.NativeArray<Int>;
 				case TFloat: macro : hl.NativeArray<Single>;
 				case TDouble: macro : hl.NativeArray<Float>;
@@ -68,7 +70,7 @@ class Module {
 	function defVal( t : TypeAttr ) : Expr {
 		return switch( t.t ) {
 		case TVoid: throw "assert";
-		case TInt, TShort: { expr : EConst(CInt("0")), pos : p };
+		case TInt, TShort, TChar: { expr : EConst(CInt("0")), pos : p };
 		case TFloat, TDouble: { expr : EConst(CFloat("0.")), pos : p };
 		case TBool: { expr : EConst(CIdent("false")), pos : p };
 		default: { expr : EConst(CIdent("null")), pos : p };
