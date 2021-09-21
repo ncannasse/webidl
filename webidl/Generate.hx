@@ -412,8 +412,11 @@ template<typename T> pref<T> *_alloc_const( const T *value ) {
 												output.add('${e}__values[${a.name}]');
 											else
 												switch (a.t.t) {
-													case TCustom(_):
+													case TCustom(st):
 														output.add('_unref(${a.name})');
+														if (st == 'FloatArray'){
+															output.add("->GetPtr()");
+														}								
 													case THString:
 														output.add(a.name + "__cstr");
 													default:
