@@ -4,6 +4,7 @@ package webidl;
 import webidl.Data;
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import tink.MacroApi;
 
 class Module {
 	var p : Position;
@@ -46,10 +47,19 @@ class Module {
 		case TFloat: hl ? macro : Single : macro : Float;
 		case TDouble: macro : Float;
 		case TBool: macro : Bool;
+		case THString : macro : String;
 		case TAny: macro : webidl.Types.Any;
-		case TArray(t):
-			var tt = makeType({ t : t, attr : [] });
-			macro : webidl.Types.NativePtr<$tt>;
+		case TArray(at):
+			switch(at) {
+				case TInt: macro : hl.NativeArray<Int>;
+				case TFloat: macro : hl.NativeArray<Single>;
+				case TDouble: macro : hl.NativeArray<Float>;
+				case TBool: macro : hl.NativeArray<Bool>;
+				default:
+					throw "Unsupported array type. Sorry";
+			}
+//			var tt = makeType({ t : t, attr : [] });
+//			macro : webidl.Types.NativePtr<$tt>;
 		case TVoidPtr: macro : webidl.Types.VoidPtr;
 		case TCustom(id): TPath({ pack : [], name : makeName(id) });
 		}
@@ -85,8 +95,8 @@ class Module {
 		return Context.makePosition({ min : pos.pos, max : pos.pos + 1, file : pos.file });
 	}
 
-	function makeNativeField( iname : String, f : webidl.Data.Field, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
-		var name = f.name;
+	function makeNativeFieldRaw( iname : String, fname : String, pos : Position, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+		var name = fname;
 		var isConstr = name == iname;
 		if( isConstr ) {
 			name = "new";
@@ -102,18 +112,29 @@ class Module {
 		if( !hl ) access.push(AInline);
 		if( pub ) access.push(APublic);
 		if( isConstr ) access.push(AStatic);
+		if (ret.attr.contains(AStatic)) access.push(AStatic);
 
-		return {
-			pos : makePosition(f.pos),
+		var x =
+		 {
+			pos : pos,
 			name : pub ? name : name + args.length,
 			meta : [makeNative(iname+"_" + name + (name == "delete" ? "" : ""+args.length))],
 			access : access,
 			kind : FFun({
 				ret : makeType(ret),
 				expr : expr,
-				args : [for( a in args ) { name : a.name, opt : a.opt, type : makeType(a.t) }],
+				args : [for( a in args ) {
+					if (a.t.attr.contains(AReturn)) {continue;}
+					{ name : a.name, opt : a.opt, type : makeType(a.t) }}],
 			}),
 		};
+
+		
+		return x;
+	}
+
+	function makeNativeField( iname : String, f : webidl.Data.Field, args : Array<FArg>, ret : TypeAttr, pub : Bool ) : Field {
+		return makeNativeFieldRaw(iname, f.name, makePosition(f.pos), args, ret, pub);
 	}
 
 	function buildDecl( d : Definition ) {
@@ -142,7 +163,6 @@ class Module {
 			for( f in fields ) {
 				switch( f.kind ) {
 				case FMethod(_):
-
 					var vars = getVariants(f.name);
 					if( vars == null ) continue;
 
@@ -152,10 +172,7 @@ class Module {
 
 						var f = makeNativeField(iname, f, vars[0].args, vars[0].ret, true);
 						dfields.push(f);
-
-
-					} else {
-
+					} else { 
 						// create dispatching code
 						var maxArgs = 0;
 						for( v in vars ) if( v.args.length > maxArgs ) maxArgs = v.args.length;
@@ -381,14 +398,23 @@ class Module {
 				Context.warning("Class " + name+" not found for implements " + intf, p);
 		case DEnum(name, values):
 			var index = 0;
-			types.push({
+			var cfields = [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(CInt(""+(index++))), pos : p }) }];
+
+			// Add Int Conversion
+			var ta : TypeAttr = { t : TInt, attr : [] };
+			var toInt = makeNativeFieldRaw( name, "ToInt", p, [], ta,true );
+			cfields.push(toInt);
+
+			var enumT = {
 				pos : p,
 				pack : pack,
 				name : makeName(name),
 				meta : [{ name : ":enum", pos : p }],
 				kind : TDAbstract(macro : Int),
-				fields : [for( v in values ) { pos : p, name : v, kind : FVar(null,{ expr : EConst(CInt(""+(index++))), pos : p }) }],
-			});
+				fields : cfields,
+			};
+			types.push(enumT);
+
 		}
 	}
 
@@ -432,6 +458,7 @@ class Module {
 		var types = buildTypes(opts, Context.defined("hl"));
 		if (types == null) return macro : Void;
 
+		
 		// Add an init function for initializing the JS module
 		if (Context.defined("js")) {
 			types.push(macro class Init {

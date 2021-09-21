@@ -26,7 +26,7 @@ typedef Field = {
 }
 
 enum FieldKind {
-	FMethod( args : Array<FArg>, ret : TypeAttr );
+	FMethod( args : Array<FArg>, ret : TypeAttr ); // parser doesn't know the difference between method attributes and return attributes, attrs : Array<Attrib> );
 	FAttribute( t : TypeAttr );
 	DConst( name : String, type : Type, value : String );
 }
@@ -43,6 +43,7 @@ enum Type {
 	TBool;
 	TAny;
 	TVoidPtr;
+	THString;
 	TCustom( id : String );
 	TArray( t : Type );
 }
@@ -55,6 +56,14 @@ enum Attrib {
 	AOperator( op : String );
 	// interfaces
 	ANoDelete;
+	AStatic;
+	AReturn;
+	AThrow(msg :String);
+	AValidate(expression : String);
+	ACObject;
+	AInternal(name:String);
+	AGet(name:String);
+	ASet(name:String);
 	APrefix( prefix : String );
-	AJSImplementation( name : String );
+	AJSImplementation( name : String );	
 }
